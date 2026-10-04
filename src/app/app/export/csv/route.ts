@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getApiUser } from "@/lib/auth";
 import { getMeasurements, getWeights } from "@/lib/data/progress";
 import { toCsv } from "@/lib/export/csv";
 import { rateLimitUser } from "@/lib/security/rate-limit";
@@ -14,10 +14,7 @@ export async function GET(request: Request) {
   const parsed = exportSchema.safeParse({ type: new URL(request.url).searchParams.get("type") });
   if (!parsed.success) return new Response("Unknown export", { status: 400 });
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, supabase } = await getApiUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
   if (!(await rateLimitUser("dataExport", user.id))) return new Response("Too many exports. Please try again later.", { status: 429 });
 

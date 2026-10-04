@@ -22,7 +22,14 @@ export default async function ProgressPage() {
   const today = profileToday(profile);
   const hide = profile.hide_numbers;
 
-  const [weights, measurements, photos] = await Promise.all([getWeights(supabase, user.id), getMeasurements(supabase, user.id), getPhotos(supabase)]);
+  const [weights, measurements, photos, { data: allBadges }, { data: myBadges }] = await Promise.all([
+    getWeights(supabase, user.id),
+    getMeasurements(supabase, user.id),
+    getPhotos(supabase),
+    supabase.from("badges").select("code, name, description").order("code"),
+    supabase.from("user_badges").select("badge_code, awarded_at"),
+  ]);
+  const earned = new Map((myBadges ?? []).map((b) => [b.badge_code as string, b.awarded_at as string]));
   const recent = weights.filter((w) => w.date >= new Date(Date.parse(today) - 90 * 86_400_000).toISOString().slice(0, 10)).reverse();
   const points = recent.map((w) => ({ date: w.date, kg: w.kg }));
   const trend = trailingAverage(points);
@@ -175,6 +182,32 @@ export default async function ProgressPage() {
           </ul>
         )}
         <PhotoUpload today={today} />
+      </section>
+
+      <section aria-labelledby="badges-heading" className="flex flex-col gap-2.5">
+        <h2 id="badges-heading" className="eyebrow">
+          Badges · {earned.size} of {allBadges?.length ?? 0}
+        </h2>
+        <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          {(allBadges ?? []).map((b) => {
+            const got = earned.has(b.code);
+            return (
+              <li
+                key={b.code}
+                className={`flex flex-col gap-0.5 rounded-[16px] border-2 p-3 ${got ? "border-ink bg-surface shadow-chip" : "border-dashed border-line text-muted"}`}
+              >
+                <span className="font-semibold">
+                  <span aria-hidden="true" className={got ? "text-turmeric" : ""}>
+                    ★{" "}
+                  </span>
+                  {b.name}
+                  <span className="sr-only">{got ? " (earned)" : " (not yet earned)"}</span>
+                </span>
+                <span className="text-xs">{b.description}</span>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       <section aria-labelledby="export-heading" className="flex flex-col gap-3 rounded-[20px] border-2 border-dashed border-ink p-5">

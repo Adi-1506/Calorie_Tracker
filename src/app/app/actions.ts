@@ -4,7 +4,8 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { getProfile, profileAge, profileToday } from "@/lib/data/profile";
+import { getAdaptiveSuggestion } from "@/lib/data/adaptive";
+import { getProfile, getTargets, profileAge, profileToday } from "@/lib/data/profile";
 import { serverEnv, isProduction } from "@/lib/env.server";
 import { getOpenFoodFactsProduct, getUsdaFood, type ExternalFood } from "@/lib/food/external";
 import { importExternalFood } from "@/lib/food/import";
@@ -502,4 +503,32 @@ export async function dismissImportedLine(formData: FormData): Promise<void> {
   const lines = (data.imported_ingredients as string[]).filter((_, i) => i !== parsed.data.index);
   await supabase.from("recipes").update({ imported_ingredients: lines }).eq("id", parsed.data.recipeId);
   refresh();
+}
+
+/** Applies this week's adaptive target. Recomputed here; nothing from the form is trusted. */
+export async function applyAdaptiveTarget(): Promise<void> {
+  const { user, supabase } = await requireUser();
+  const profile = await getProfile(supabase, user.id);
+  if (!profile?.onboarding_completed_at) redirect("/app/onboarding");
+  const suggestion = await getAdaptiveSuggestion(supabase, user.id, profile);
+  const today = profileToday(profile);
+  const current = await getTargets(supabase, today);
+  if (!suggestion || !current) redirect("/app/targets");
+
+  // Keep protein in grams; move carbs and fat in proportion to the calorie change.
+  const ratio = (suggestion.calories - current.protein_g * 4) / Math.max(current.calories - current.protein_g * 4, 1);
+  const { error } = await supabase.from("nutrition_targets").upsert(
+    {
+      effective_from: today,
+      calories: suggestion.calories,
+      protein_g: current.protein_g,
+      carbs_g: Math.max(0, Math.round(current.carbs_g * ratio)),
+      fat_g: Math.max(0, Math.round(current.fat_g * ratio)),
+      water_ml: current.water_ml,
+      source: "adaptive",
+    },
+    { onConflict: "user_id,effective_from" },
+  );
+  if (!error) await audit("targets_changed", { userId: user.id });
+  redirect("/app/targets?adjusted=1");
 }

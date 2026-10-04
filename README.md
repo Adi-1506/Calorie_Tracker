@@ -42,6 +42,7 @@ npm run dev                  # http://localhost:3000
    Run `npx supabase db push` again whenever you pull changes that add files to `supabase/migrations/`.
 3. In the Supabase dashboard:
    - **Authentication → Sign In / Providers → Email:** keep **Confirm email** on, and set the minimum password length to **12**. Turn on **Secure password change**.
+   - **Authentication → Multi-Factor:** make sure **TOTP (App Authenticator)** is enabled so users can turn on two-factor login in Settings.
    - **Authentication → URL Configuration:** set **Site URL** to your site (e.g. `http://localhost:3000` for local use, your Vercel URL in production) and add `http://localhost:3000/**` and `https://<your-domain>/**` to **Redirect URLs**.
    - **Authentication → Email Templates:** paste the contents of `supabase/templates/confirmation.html` (Confirm signup), `recovery.html` (Reset password) and `email_change.html` (Change email address). These links work even when the email is opened on another device.
    - The default email sender is heavily rate limited; set up custom SMTP (e.g. Resend's free tier) before launch.

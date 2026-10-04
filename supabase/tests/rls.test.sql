@@ -76,7 +76,7 @@ insert into auth.users (id, email) values
 insert into public.foods (id, owner_id, name, source, is_verified, calories, protein_g, carbs_g, fat_g)
 values ('10000000-0000-0000-0000-000000000001', null, 'Idli (steamed)', 'indian_seed', true, 146, 4.5, 30, 0.4);
 
-insert into public.badges (code, name, description) values ('first_log', 'First log', 'Logged your first meal');
+-- The badge catalogue is seeded by migration 20261004000700.
 
 -- Structure: RLS must be on for every table in public.
 select tests.eq(
@@ -114,6 +114,11 @@ select tests.throws($$insert into public.progress_photos (storage_path) values (
 
 -- Allowed profile edits still work.
 select tests.eq(tests.affected($$update public.profiles set display_name = 'A'$$), 1, 'A can edit own display name');
+select tests.eq(tests.affected($$update public.profiles set ai_consent_at = now()$$), 1, 'A can record AI consent');
+
+-- Fasting: one open fast at a time (step 3d).
+insert into public.fasting_sessions (target_hours) values (16);
+select tests.throws($$insert into public.fasting_sessions (target_hours) values (14)$$, '23505');
 
 -- Health safety (items 49, 50).
 select tests.throws(
@@ -139,6 +144,8 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 select tests.eq(tests.rows('select * from public.meal_entries'), 0, 'B cannot read A''s meals');
 select tests.eq(tests.rows('select * from public.foods where external_id is null'), 1, 'B sees catalogue only, not A''s custom food');
 select tests.eq(tests.rows('select * from public.reviews'), 0, 'B cannot see A''s pending review');
+select tests.eq(tests.rows('select * from public.fasting_sessions'), 0, 'B cannot see A''s fasts');
+select tests.eq(tests.affected($$insert into public.fasting_sessions (target_hours) values (16)$$), 1, 'B can start a fast while A has one open');
 select tests.eq(
   tests.affected($$update public.meal_entries set calories = 0 where id = '20000000-0000-0000-0000-000000000001'$$),
   0, 'B cannot update A''s meal by id (IDOR)');
@@ -170,7 +177,7 @@ select set_config('request.jwt.claims', '', false);
 set role anon;
 
 select tests.eq(tests.rows('select * from public.foods where external_id is null'), 1, 'anon sees catalogue foods');
-select tests.eq(tests.rows('select * from public.badges'), 1, 'anon sees badge catalogue');
+select tests.eq(least(tests.rows('select * from public.badges'), 1), 1, 'anon sees badge catalogue');
 select tests.eq(tests.rows('select * from public.reviews'), 0, 'anon sees no unpublished reviews');
 select tests.throws($$select * from public.meal_entries$$, '42501');
 select tests.throws($$select * from public.profiles$$, '42501');

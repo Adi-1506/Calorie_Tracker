@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { addWater, copyEntries, deleteEntry } from "@/app/app/actions";
+import { BadgeToast } from "@/components/app/badge-toast";
 import { CalorieRing, Ring } from "@/components/app/rings";
 import { requireUser } from "@/lib/auth";
 import { getProfile, getTargets, profileToday } from "@/lib/data/profile";
 import { addDays, formatDayLabel, isIsoDate } from "@/lib/dates";
+import { habitSummary } from "@/lib/habits/summary";
 import { sumEntries } from "@/lib/nutrition/snapshot";
 import { MEALS } from "@/lib/validation/food";
 
@@ -47,6 +49,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/app">)
   const hide = profile.hide_numbers;
   const lastWater = water.at(-1);
 
+  const { streak, newBadges } =
+    date === today ? await habitSummary(supabase, user.id, today, !!targets?.water_ml && waterMl >= targets.water_ml) : { streak: 0, newBadges: [] };
   const glassCount = Math.min(Math.max(Math.ceil((targets?.water_ml ?? 2000) / 250), 4), 12);
   const glassesFull = Math.min(Math.floor(waterMl / 250), glassCount);
 
@@ -61,6 +65,11 @@ export default async function DashboardPage({ searchParams }: PageProps<"/app">)
             {profile.display_name && date === today ? `Hi ${profile.display_name}` : formatDayLabel(date, today)}
           </h1>
           <p className="text-sm text-muted">
+            {streak >= 2 && (
+              <span className="mr-2 inline-block rounded-full border-2 border-ink bg-turmeric px-2 text-xs font-semibold leading-5 text-on-turmeric">
+                {streak}-day streak
+              </span>
+            )}
             {new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`))}
           </p>
         </div>
@@ -68,6 +77,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/app">)
           →
         </Link>
       </div>
+
+      {newBadges.length > 0 && <BadgeToast badges={newBadges} />}
 
       <section aria-labelledby="summary-heading" className="card flex flex-col items-center gap-5 p-5 sm:flex-row sm:justify-around sm:p-7">
         <h2 id="summary-heading" className="sr-only">

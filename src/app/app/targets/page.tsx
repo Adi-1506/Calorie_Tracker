@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { applyAdaptiveTarget } from "@/app/app/actions";
 import { TargetsForm } from "@/components/app/targets-form";
+import { getAdaptiveSuggestion } from "@/lib/data/adaptive";
 import { requireUser } from "@/lib/auth";
 import { getLatestWeightKg, getProfile, getTargets, profileAge, profileToday } from "@/lib/data/profile";
 import { bmr, CALORIE_FLOOR, suggestTargets, tdee } from "@/lib/nutrition/targets";
@@ -13,9 +15,15 @@ export default async function TargetsPage({ searchParams }: PageProps<"/app/targ
   const profile = await getProfile(supabase, user.id);
   if (!profile?.onboarding_completed_at) redirect("/app/onboarding");
 
-  const welcome = (await searchParams).welcome === "1";
+  const params = await searchParams;
+  const welcome = params.welcome === "1";
+  const adjusted = params.adjusted === "1";
   const today = profileToday(profile);
-  const [targets, weightKg] = await Promise.all([getTargets(supabase, today), getLatestWeightKg(supabase, user.id)]);
+  const [targets, weightKg, adaptive] = await Promise.all([
+    getTargets(supabase, today),
+    getLatestWeightKg(supabase, user.id),
+    getAdaptiveSuggestion(supabase, user.id, profile),
+  ]);
   const age = profileAge(profile);
   const input =
     weightKg && age && profile.sex && profile.height_cm && profile.activity_level && profile.goal
@@ -82,6 +90,19 @@ export default async function TargetsPage({ searchParams }: PageProps<"/app/targ
         </p>
       </section>
 
+      {adjusted && <p className="notice notice-ok">Target updated from your weekly check-in.</p>}
+      {adaptive && !adjusted && (
+        <section aria-labelledby="adaptive-heading" className="card flex flex-col gap-3 p-5">
+          <h2 id="adaptive-heading" className="font-display text-xl font-bold">
+            Weekly check-in: try {adaptive.calories.toLocaleString("en")} kcal
+          </h2>
+          <p className="text-sm">{adaptive.reason}</p>
+          <form action={applyAdaptiveTarget} className="flex flex-wrap items-center gap-3">
+            <button className="btn btn-primary">Use {adaptive.calories.toLocaleString("en")} kcal</button>
+            <span className="text-xs text-muted">Or keep your current target. This is an estimate, not medical advice.</span>
+          </form>
+        </section>
+      )}
       {suggested && targets?.source === "manual" && (
         <p className="notice notice-warn">
           Suggested for you: {suggested.calories} kcal, {suggested.proteinG} g protein, {suggested.carbsG} g carbs, {suggested.fatG} g fat.

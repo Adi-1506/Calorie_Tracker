@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getApiUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, profileToday } from "@/lib/data/profile";
 import { detectImageType, MAX_UPLOAD_BYTES, sanitizeImage } from "@/lib/images/sanitize";
@@ -18,10 +18,7 @@ export async function POST(request: Request) {
   const length = Number(request.headers.get("content-length"));
   if (!length || length > MAX_UPLOAD_BYTES + 64 * 1024) return json(413, "Photos can be up to 5 MB.");
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, supabase } = await getApiUser();
   if (!user) return json(401, "Please log in again.");
   if (!(await rateLimitUser("photoUpload", user.id))) return json(429, "You've uploaded a lot of photos. Please try again later.");
 
