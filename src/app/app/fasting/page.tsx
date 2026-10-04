@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { getProfile, profileAge } from "@/lib/data/profile";
 import { elapsed } from "@/lib/habits/streak";
 
-export const metadata: Metadata = { title: "Fasting | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Fasting | Kalo", robots: { index: false } };
 
 export default async function FastingPage() {
   const { user, supabase } = await requireUser();

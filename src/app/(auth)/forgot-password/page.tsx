@@ -4,8 +4,8 @@ import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 import { getNonce, turnstileSiteKey } from "@/lib/nonce";
 
 export const metadata: Metadata = {
-  title: "Reset your password | Calorie Tracker",
-  description: "Get a link to reset your Calorie Tracker password.",
+  title: "Reset your password | Kalo",
+  description: "Get a link to reset your Kalo password.",
   robots: { index: false },
 };
 

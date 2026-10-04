@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { NewRecipeForm } from "@/components/app/recipe-forms";
 import { requireUser } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "New recipe | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "New recipe | Kalo", robots: { index: false } };
 
 export default async function NewRecipePage() {
   await requireUser();

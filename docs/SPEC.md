@@ -6,7 +6,7 @@ This is the original brief, kept as the source of truth. Decisions that change o
 
 | Topic | Decision |
 |---|---|
-| App name | `[APP NAME]` is still a placeholder; it's written as "Calorie Tracker" until a name is chosen. |
+| App name | **Kalo** (chosen by the owner on 2026-10-04). |
 | Stack | Next.js 16 (App Router) + TypeScript, Tailwind v4, Supabase, Vercel, as specified. In Next.js 16, `middleware.ts` is called `proxy.ts`. |
 | Manus | Manus is a separate AI agent and can't be plugged into this workflow. Code is written and pushed as pull requests to this repo, and deployment follows the manual steps in [DEPLOYMENT.md](./DEPLOYMENT.md). |
 | Field-level encryption (item 5) | Weight and body measurements are encrypted in the app server (AES-256-GCM, server-only key) before they reach the database, so the database only ever holds ciphertext. Progress photos live in a private bucket with no client access. |

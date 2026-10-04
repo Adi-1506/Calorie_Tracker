@@ -14,7 +14,7 @@ import { countryForTimeZone, searchExternal } from "@/lib/food/external";
 import { rateLimitUser } from "@/lib/security/rate-limit";
 import { MEALS, mealSchema, searchQuerySchema, type Meal } from "@/lib/validation/food";
 
-export const metadata: Metadata = { title: "Add food | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Add food | Kalo", robots: { index: false } };
 
 type FoodRow = {
   id: string;

@@ -1,4 +1,4 @@
-# Calorie Tracker
+# Kalo
 
 A calorie and nutrition tracker that works as a responsive website and an installable mobile app (PWA). Log any food from anywhere: packaged products by barcode, generic foods, your own recipes, or a quick calorie entry. It also includes a dataset of home-style Indian dishes.
 

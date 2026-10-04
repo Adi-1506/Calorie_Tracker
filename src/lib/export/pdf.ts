@@ -22,7 +22,7 @@ export function latin1(text: string): string {
 export async function buildReport(input: ReportInput): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle("Nutrition report");
-  doc.setProducer("Calorie Tracker");
+  doc.setProducer("Kalo");
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
@@ -66,7 +66,7 @@ export async function buildReport(input: ReportInput): Promise<Uint8Array> {
   }
 
   for (const p of doc.getPages()) {
-    p.drawText("Calorie Tracker. Estimates only; not medical advice.", { x: 50, y: 30, size: 8, font: regular, color: MUTED });
+    p.drawText("Kalo. Estimates only; not medical advice.", { x: 50, y: 30, size: 8, font: regular, color: MUTED });
   }
   return doc.save();
 }

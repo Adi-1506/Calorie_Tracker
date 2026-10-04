@@ -7,7 +7,7 @@ import { aiConfigured } from "@/lib/ai/provider";
 import { aiRemaining } from "@/lib/data/coach";
 import { getProfile } from "@/lib/data/profile";
 
-export const metadata: Metadata = { title: "Coach | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Coach | Kalo", robots: { index: false } };
 
 export default async function CoachPage() {
   const { user, supabase } = await requireUser();

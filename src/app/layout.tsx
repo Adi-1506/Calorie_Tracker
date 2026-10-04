@@ -9,7 +9,7 @@ const body = Instrument_Sans({ variable: "--font-body", subsets: ["latin"] });
 const mono = IBM_Plex_Mono({ variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export const metadata: Metadata = {
-  title: "Calorie Tracker",
+  title: "Kalo: calorie and nutrition tracker",
   description: "Track calories, macros and nutrients for any food, from home-cooked meals to packaged snacks.",
 };
 

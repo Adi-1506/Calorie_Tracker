@@ -6,7 +6,7 @@ import { EnrollTotp } from "@/components/auth/mfa-forms";
 import { getProfile } from "@/lib/data/profile";
 import { requireUser } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "Settings | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Settings | Kalo", robots: { index: false } };
 
 export default async function SettingsPage({ searchParams }: PageProps<"/app/settings">) {
   const { user, supabase } = await requireUser();

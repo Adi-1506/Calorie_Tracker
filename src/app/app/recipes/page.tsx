@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ImportRecipeForm } from "@/components/app/recipe-forms";
 import { requireUser } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "Recipes | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Recipes | Kalo", robots: { index: false } };
 
 export default async function RecipesPage() {
   const { supabase } = await requireUser();

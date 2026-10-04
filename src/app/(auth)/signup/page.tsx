@@ -4,7 +4,7 @@ import { SignupForm } from "@/components/auth/signup-form";
 import { getNonce, turnstileSiteKey } from "@/lib/nonce";
 
 export const metadata: Metadata = {
-  title: "Create your free account | Calorie Tracker",
+  title: "Create your free account | Kalo",
   description: "Sign up free to track calories, macros and nutrients for any food.",
 };
 

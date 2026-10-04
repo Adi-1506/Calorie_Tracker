@@ -5,7 +5,7 @@ import { needsSecondFactor } from "@/lib/auth";
 import { safeRedirectPath } from "@/lib/security/redirect";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Two-factor check | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Two-factor check | Kalo", robots: { index: false } };
 
 export default async function MfaPage({ searchParams }: PageProps<"/login/mfa">) {
   const params = await searchParams;

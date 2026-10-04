@@ -3,7 +3,7 @@ import Link from "next/link";
 
 // Thank-you page after signup; also the analytics conversion page (section 2).
 export const metadata: Metadata = {
-  title: "Check your email | Calorie Tracker",
+  title: "Check your email | Kalo",
   description: "Confirm your email address to finish creating your account.",
   robots: { index: false },
 };
