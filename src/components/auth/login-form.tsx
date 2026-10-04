@@ -23,7 +23,7 @@ export function LoginForm({ next, siteKey, nonce }: { next?: string; siteKey?: s
         errors={errorsFor("password", state, clientErrors)}
       />
       <div className="-mt-2 text-right text-sm">
-        <Link href="/forgot-password" className="underline underline-offset-4">
+        <Link href="/forgot-password" className="link">
           Forgot password?
         </Link>
       </div>

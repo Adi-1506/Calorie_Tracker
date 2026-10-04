@@ -17,15 +17,15 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-semibold">Log in</h1>
-      <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-400">
+      <h1 className="mb-1 font-display text-[1.75rem] font-bold tracking-tight">Log in</h1>
+      <p className="mb-6 text-sm text-muted">
         New here?{" "}
-        <Link href="/signup" className="underline underline-offset-4">
+        <Link href="/signup" className="link">
           Start tracking free
         </Link>
       </p>
       {linkError && (
-        <p role="alert" className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+        <p role="alert" className="mb-4 notice notice-warn">
           That link is invalid or has expired. Please log in or request a new one.
         </p>
       )}

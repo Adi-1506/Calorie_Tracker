@@ -27,71 +27,90 @@ type RingProps = {
   target: number | null;
   unit: string;
   color: string;
-  size?: number;
-  stroke?: number;
   hideNumbers?: boolean;
-  children?: React.ReactNode;
 };
 
-export function Ring({ label, value, target, unit, color, size = 88, stroke = 9, hideNumbers, children }: RingProps) {
-  const radius = (size - stroke) / 2;
-  const progress = target && target > 0 ? Math.min(value / target, 1) : 0;
+function describe(label: string, value: number, target: number | null, unit: string) {
   const over = target != null && value > target;
-  const description = target
+  return target
     ? `${label}: ${Math.round(value)} of ${target} ${unit}${over ? ", over target" : ""}`
     : `${label}: ${Math.round(value)} ${unit}`;
+}
 
+function Arc({ c, r, stroke, color, progress }: { c: number; r: number; stroke: number; color: string; progress: number }) {
   return (
-    <figure className="flex flex-col items-center gap-1.5">
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={hideNumbers ? label : description} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={stroke} className="stroke-neutral-200 dark:stroke-neutral-800" />
-          <m.circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            strokeWidth={stroke}
-            strokeLinecap="round"
-            stroke={over ? "#b45309" : color}
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: progress }}
-            transition={{ duration: DURATION, ease: "easeOut" }}
-          />
+    <m.circle
+      cx={c}
+      cy={c}
+      r={r}
+      fill="none"
+      strokeWidth={stroke}
+      strokeLinecap="round"
+      stroke={color}
+      transform={`rotate(-90 ${c} ${c})`}
+      initial={{ pathLength: 0 }}
+      animate={{ pathLength: progress }}
+      transition={{ duration: DURATION, ease: "easeOut" }}
+    />
+  );
+}
+
+/** A small katori (bowl) for one macro. */
+export function Ring({ label, value, target, unit, color, hideNumbers }: RingProps) {
+  const progress = target && target > 0 ? Math.min(value / target, 1) : 0;
+  const over = target != null && value > target;
+  return (
+    <figure className="flex flex-col items-center gap-1">
+      <div className="relative size-[76px]">
+        <svg width="76" height="76" viewBox="0 0 76 76" role="img" aria-label={hideNumbers ? label : describe(label, value, target, unit)}>
+          <circle cx="38" cy="38" r="34" className="fill-well stroke-ink" strokeWidth="2" />
+          <Arc c={38} r={26} stroke={8} color={over ? "var(--chili)" : color} progress={progress} />
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-tight" aria-hidden="true">
-          {children ??
-            (hideNumbers ? null : (
-              <span className="text-sm font-semibold tabular-nums">
-                <CountUp value={value} />
-              </span>
-            ))}
-        </div>
+        {!hideNumbers && (
+          <span className="absolute inset-0 flex items-center justify-center font-mono text-[15px] font-semibold tabular-nums" aria-hidden="true">
+            <CountUp value={value} />
+          </span>
+        )}
       </div>
-      <figcaption className="text-xs text-neutral-600 dark:text-neutral-400">
-        {label}
-        {!hideNumbers && target ? <span className="tabular-nums"> / {target}{unit === "kcal" ? "" : unit}</span> : null}
+      <figcaption className="text-center leading-tight">
+        <span className="block text-sm font-semibold">{label}</span>
+        {!hideNumbers && target ? (
+          <span className="block font-mono text-xs text-muted tabular-nums">
+            {Math.round(value)} / {target} {unit}
+          </span>
+        ) : null}
       </figcaption>
     </figure>
   );
 }
 
+/** The steel plate: rim, a turmeric track for calories, and the amount left in the middle. */
 export function CalorieRing({ eaten, target, hideNumbers }: { eaten: number; target: number | null; hideNumbers?: boolean }) {
   const left = target != null ? target - eaten : null;
+  const progress = target && target > 0 ? Math.min(eaten / target, 1) : 0;
+  const over = left != null && left < 0;
   return (
-    <Ring label="Calories" value={eaten} target={target} unit="kcal" color="#047857" size={168} stroke={14} hideNumbers={hideNumbers}>
-      {hideNumbers ? (
-        <span className="text-sm text-neutral-600 dark:text-neutral-400">{left != null && left < 0 ? "Over" : "Today"}</span>
-      ) : (
-        <>
-          <span className="text-3xl font-semibold tabular-nums">
-            <CountUp value={Math.abs(left ?? eaten)} />
-          </span>
-          <span className="text-xs text-neutral-600 dark:text-neutral-400">
-            {left == null ? "kcal eaten" : left >= 0 ? "kcal left" : "kcal over"}
-          </span>
-        </>
-      )}
-    </Ring>
+    <figure className="relative size-[230px] shrink-0">
+      <svg width="230" height="230" viewBox="0 0 250 250" role="img" aria-label={hideNumbers ? "Calories" : describe("Calories", eaten, target, "kcal")} className="size-full">
+        <circle cx="125" cy="125" r="116" className="fill-well stroke-ink" strokeWidth="2" />
+        <circle cx="125" cy="125" r="100" fill="none" className="stroke-line" strokeWidth="16" />
+        <Arc c={125} r={100} stroke={16} color={over ? "var(--chili)" : "var(--turmeric)"} progress={progress} />
+        <circle cx="125" cy="125" r="84" className="fill-surface stroke-ink" strokeWidth="2" />
+      </svg>
+      <figcaption className="absolute inset-0 flex flex-col items-center justify-center text-center leading-tight" aria-hidden="true">
+        {hideNumbers ? (
+          <span className="font-display text-xl font-bold">{over ? "Over" : "Today"}</span>
+        ) : (
+          <>
+            <span className="font-mono text-[2.75rem] font-semibold tabular-nums">
+              <CountUp value={Math.abs(left ?? eaten)} />
+            </span>
+            <span className="text-sm text-muted">
+              {left == null ? "kcal eaten" : `kcal ${left >= 0 ? "left" : "over"} of ${target}`}
+            </span>
+          </>
+        )}
+      </figcaption>
+    </figure>
   );
 }

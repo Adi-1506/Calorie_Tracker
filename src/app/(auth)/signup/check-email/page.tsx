@@ -11,14 +11,14 @@ export const metadata: Metadata = {
 export default function CheckEmailPage() {
   return (
     <div className="flex flex-col gap-3">
-      <h1 className="text-2xl font-semibold">Thanks for signing up!</h1>
+      <h1 className="font-display text-[1.75rem] font-bold tracking-tight">Thanks for signing up!</h1>
       <p>
         We&apos;ve sent you an email. Click the link in it to confirm your address, then you can start
         tracking.
       </p>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="text-sm text-muted">
         Didn&apos;t get it? Check your spam folder, or{" "}
-        <Link href="/signup" className="underline underline-offset-4">
+        <Link href="/signup" className="link">
           try again
         </Link>
         .

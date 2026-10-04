@@ -8,8 +8,8 @@ export default async function NewRecipePage() {
   await requireUser();
   return (
     <div className="mx-auto w-full max-w-xl">
-      <h1 className="mb-6 text-2xl font-semibold">New recipe</h1>
-      <div className="rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
+      <h1 className="mb-6 font-display text-[1.75rem] font-bold tracking-tight">New recipe</h1>
+      <div className="card p-5 sm:p-6">
         <NewRecipeForm />
       </div>
     </div>

@@ -90,7 +90,7 @@ export function BarcodeScanner({ meal, date }: { meal: string; date: string }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Scan a barcode"
-        className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-neutral-300 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-emerald-700 dark:border-neutral-700 dark:hover:bg-neutral-900"
+        className="btn btn-icon shrink-0"
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
           <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10.5 8v8M14 8v8M17 8v8" />
@@ -100,22 +100,22 @@ export function BarcodeScanner({ meal, date }: { meal: string; date: string }) {
         ref={dialog}
         onClose={() => setOpen(false)}
         aria-labelledby="scan-title"
-        className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-2xl border border-neutral-300 bg-[var(--background)] p-0 text-[var(--foreground)] backdrop:bg-black/60 dark:border-neutral-700"
+        className="card m-auto w-[min(28rem,calc(100vw-2rem))] p-0 text-ink backdrop:bg-black/60"
       >
         <div className="flex flex-col gap-4 p-5">
           <div className="flex items-center justify-between">
-            <h2 id="scan-title" className="text-lg font-semibold">
+            <h2 id="scan-title" className="font-display text-xl font-bold">
               Scan a barcode
             </h2>
-            <button type="button" onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-900">
+            <button type="button" onClick={() => setOpen(false)} className="btn btn-sm">
               Close
             </button>
           </div>
           {open && (
-            <video ref={video} muted playsInline className="aspect-[4/3] w-full rounded-xl bg-black object-cover" aria-label="Camera preview" />
+            <video ref={video} muted playsInline className="aspect-[4/3] w-full rounded-xl border-2 border-ink bg-black object-cover" aria-label="Camera preview" />
           )}
           {error && (
-            <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+            <p role="alert" className="text-sm text-danger">
               {error}
             </p>
           )}
@@ -135,12 +135,12 @@ export function BarcodeScanner({ meal, date }: { meal: string; date: string }) {
               id="manual-code"
               inputMode="numeric"
               pattern="[0-9]{8,14}"
-              placeholder="Or type the barcode number"
+              placeholder="Or type the number"
               value={manual}
               onChange={(e) => setManual(e.target.value.replace(/\D/g, "").slice(0, 14))}
-              className="min-w-0 flex-1 rounded-lg border border-neutral-300 bg-transparent px-3 py-2 dark:border-neutral-700"
+              className="input min-w-0 flex-1"
             />
-            <button className="rounded-lg bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800">Look up</button>
+            <button className="btn btn-primary">Look up</button>
           </form>
         </div>
       </dialog>

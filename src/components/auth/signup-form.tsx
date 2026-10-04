@@ -29,11 +29,11 @@ export function SignupForm({ siteKey, nonce }: { siteKey?: string; nonce?: strin
       </Checkbox>
       <Checkbox name="consent" errors={errorsFor("consent", state, clientErrors)}>
         I agree to the{" "}
-        <Link href="/terms" className="underline underline-offset-4">
+        <Link href="/terms" className="link">
           Terms
         </Link>{" "}
         and{" "}
-        <Link href="/privacy" className="underline underline-offset-4">
+        <Link href="/privacy" className="link">
           Privacy Policy
         </Link>
         , and I consent to my health data (such as weight and food logs) being stored to provide the service.

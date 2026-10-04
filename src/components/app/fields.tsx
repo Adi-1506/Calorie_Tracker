@@ -19,7 +19,7 @@ export function Select({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={name} className="text-sm font-medium">
+      <label htmlFor={name} className="text-sm font-semibold">
         {label}
       </label>
       <select
@@ -29,7 +29,7 @@ export function Select({
         defaultValue={defaultValue ?? ""}
         aria-invalid={errors?.length ? true : undefined}
         aria-describedby={errors?.length ? `${name}-error` : undefined}
-        className="rounded-lg border border-neutral-300 bg-transparent px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 aria-[invalid=true]:border-red-600 dark:border-neutral-700 dark:bg-neutral-950"
+        className="input"
       >
         {placeholder && (
           <option value="" disabled>
@@ -44,7 +44,7 @@ export function Select({
         ))}
       </select>
       {errors?.length ? (
-        <p id={`${name}-error`} role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p id={`${name}-error`} role="alert" className="text-sm font-medium text-danger">
           {errors[0]}
         </p>
       ) : null}

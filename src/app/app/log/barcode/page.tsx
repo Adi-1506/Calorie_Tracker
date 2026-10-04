@@ -69,22 +69,22 @@ export default async function BarcodePage({ searchParams }: PageProps<"/app/log/
   return (
     <>
       <div>
-        <Link href={back} className="text-sm underline underline-offset-4">
+        <Link href={back} className="text-sm link">
           ← Back to search
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold">Scanned product</h1>
-        {code && <p className="font-mono text-sm text-neutral-600 dark:text-neutral-400">{code}</p>}
+        <h1 className="mt-2 font-display text-[1.75rem] font-bold tracking-tight">Scanned product</h1>
+        {code && <p className="font-mono text-sm text-muted">{code}</p>}
       </div>
 
       {problem && (
-        <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+        <p role="alert" className="notice notice-warn">
           {problem}
         </p>
       )}
 
       {rows.length > 0 ? (
-        <section aria-label="Product" className="rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
-          <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+        <section aria-label="Product" className="card p-4 sm:p-5">
+          <ul className="rows">
             {rows.map((f) => (
               <AddFoodRow key={f.id} food={f} meal={meal} date={date} />
             ))}
@@ -92,12 +92,12 @@ export default async function BarcodePage({ searchParams }: PageProps<"/app/log/
         </section>
       ) : (
         !problem && (
-          <section className="rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
+          <section className="card p-4 sm:p-5">
             <p>We couldn&apos;t find this product in Open Food Facts yet.</p>
             <p className="mt-2 text-sm">
               <Link
                 href={`/app/foods/new?${new URLSearchParams({ meal, date, barcode: code ?? "" })}`}
-                className="underline underline-offset-4"
+                className="link"
               >
                 Add it as a custom food
               </Link>{" "}
