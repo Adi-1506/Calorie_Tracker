@@ -208,4 +208,19 @@ select tests.eq((select count(*) from public.meal_entries), 0, 'account deletion
 select tests.eq((select count(*) from public.foods where owner_id is not null), 0, 'account deletion cascades to custom foods');
 select tests.eq((select count(*) from public.audit_logs), 1, 'audit log survives account deletion');
 
+-- ---------------------------------------------------------------------------
+-- Rate limiting (item 11): server only, counts hits per window
+-- ---------------------------------------------------------------------------
+set role authenticated;
+select tests.throws($$select public.check_rate_limit('login:x', 5, 60)$$, '42501');
+select tests.throws($$select * from public.rate_limits$$, '42501');
+reset role;
+
+set role service_role;
+select tests.eq((select count(*) from generate_series(1, 3) where public.check_rate_limit('login:test', 3, 3600)), 3,
+  'first 3 hits are allowed');
+select tests.eq(public.check_rate_limit('login:test', 3, 3600)::int, 0, '4th hit is blocked');
+select tests.eq(public.check_rate_limit('login:other', 3, 3600)::int, 1, 'other keys are independent');
+reset role;
+
 \echo 'All RLS tests passed.'

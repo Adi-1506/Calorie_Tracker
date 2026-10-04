@@ -1,0 +1,11 @@
+#!/bin/sh
+# Blocks commits that contain secrets (security item 2).
+# Install gitleaks: https://github.com/gitleaks/gitleaks#installing
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --no-banner || {
+    echo "gitleaks found a possible secret in your staged changes. Remove it before committing."
+    exit 1
+  }
+else
+  echo "warning: gitleaks is not installed, so staged changes were not scanned for secrets." >&2
+fi
