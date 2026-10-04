@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import { useOnline } from "@/lib/offline/online";
 import { enqueue, listQueued, QUEUE_EVENT, type QueuedItem } from "@/lib/offline/queue";
 import { offlineItemSchema } from "@/lib/offline/schema";
@@ -14,7 +14,11 @@ function defaultMeal() {
   return h < 11 ? "breakfast" : h < 16 ? "lunch" : h < 21 ? "dinner" : "snack";
 }
 
+const noop = () => () => {};
+
 export function OfflineLogger() {
+  // Buttons stay disabled until the page's script has loaded, so a quick tap can't submit the plain HTML form.
+  const ready = useSyncExternalStore(noop, () => true, () => false);
   const [queued, setQueued] = useState<QueuedItem[]>([]);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
@@ -49,6 +53,7 @@ export function OfflineLogger() {
     };
     const parsed = offlineItemSchema.safeParse(item);
     if (!parsed.success) {
+      setSaved("");
       setError("Enter calories between 1 and 10,000, and macros between 0 and 1,000 g.");
       return;
     }
@@ -60,6 +65,7 @@ export function OfflineLogger() {
 
   async function addWater(ml: number) {
     await enqueue({ kind: "water", clientId: crypto.randomUUID(), date: localToday(), ml });
+    setError("");
     setSaved(`Saved ${ml} ml of water on this device.`);
   }
 
@@ -122,7 +128,9 @@ export function OfflineLogger() {
             </div>
           ))}
         </div>
-        <button className="btn btn-primary self-start">Save on this device</button>
+        <button className="btn btn-primary self-start" disabled={!ready}>
+          Save on this device
+        </button>
       </form>
 
       <section aria-labelledby="offline-water" className="card flex flex-col gap-3 p-5 sm:p-6">
@@ -131,7 +139,7 @@ export function OfflineLogger() {
         </h2>
         <div className="flex flex-wrap gap-2">
           {[250, 500, 750].map((ml) => (
-            <button key={ml} type="button" className="btn btn-sm" onClick={() => addWater(ml)}>
+            <button key={ml} type="button" className="btn btn-sm" disabled={!ready} onClick={() => addWater(ml)}>
               + {ml} ml
             </button>
           ))}

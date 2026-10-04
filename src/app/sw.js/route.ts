@@ -20,7 +20,8 @@ async function cacheOfflinePage() {
   const res = await fetch(OFFLINE_URL, { cache: "no-store", credentials: "omit" });
   if (!res.ok) throw new Error("offline page unavailable");
   const html = await res.clone().text();
-  const assets = [...new Set([...html.matchAll(/(?:src|href)="(\\/_next\\/static\\/[^"]+)"/g)].map((m) => m[1].replaceAll("&amp;", "&")))];
+  // Script tags, stylesheets and fonts, plus the client chunks named only inside the inline RSC payload.
+  const assets = [...new Set([...html.matchAll(/static\\/(?:chunks|css|media)\\/[\\w.~\\/-]+?\\.(?:js|css|woff2)/g)].map((m) => "/_next/" + m[0]))];
   const pages = await caches.open(PAGES);
   await pages.put(OFFLINE_URL, res);
   const statics = await caches.open(STATIC);
@@ -67,7 +68,12 @@ self.addEventListener("fetch", (event) => {
   // Page loads: always the network (never cached); the offline logger if that fails.
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req).catch(async () => (await caches.match(OFFLINE_URL, { cacheName: PAGES })) ?? Response.error()),
+      fetch(req).catch(async () => {
+        const offline = await caches.match(OFFLINE_URL, { cacheName: PAGES });
+        if (!offline) return Response.error();
+        // Redirect rather than serve it in place: the app only hydrates when the URL matches the page.
+        return url.pathname === OFFLINE_URL ? offline : Response.redirect(OFFLINE_URL, 302);
+      }),
     );
   }
   // Everything else (data requests, /api, images) goes straight to the network.
