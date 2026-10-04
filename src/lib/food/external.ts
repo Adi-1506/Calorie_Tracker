@@ -43,6 +43,11 @@ const text = (max: number) =>
     .optional()
     .catch(undefined);
 
+/** Product names are often SHOUTED ("MAGGI 2-MINUTE NOODLES"). Tidy all-caps words only. */
+export function tidyName(s: string) {
+  return s.replace(/\b[A-Z][A-Z'&-]+\b/g, (w) => w.charAt(0) + w.slice(1).toLowerCase());
+}
+
 function clampNutrient(value: unknown, max: number): number | null {
   const parsed = num.safeParse(value);
   if (!parsed.success || parsed.data < 0) return null;
@@ -83,7 +88,11 @@ const offProduct = z.object({
   code: z.string().regex(/^[0-9]{1,14}$/),
   product_name: text(200),
   product_name_en: text(200),
-  brands: text(120),
+  brands: z
+    .union([z.string(), z.array(z.string()).transform((a) => a.join(","))])
+    .transform((s) => s.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 120))
+    .optional()
+    .catch(undefined),
   serving_size: text(60),
   serving_quantity: z.unknown().optional(),
   nutriments: z.record(z.string(), z.unknown()).default({}),
@@ -100,8 +109,8 @@ export function normalizeOff(raw: unknown): ExternalFood | null {
   return finish({
     source: "open_food_facts",
     externalId: p.code,
-    name: p.product_name || p.product_name_en || "",
-    brand: p.brands?.split(",")[0]?.trim() || null,
+    name: tidyName(p.product_name || p.product_name_en || ""),
+    brand: tidyName(p.brands?.split(",")[0]?.trim() ?? "") || null,
     barcode: /^[0-9]{8,14}$/.test(p.code) ? p.code : null,
     per100g: {
       calories: clampNutrient(kcal, 10000),
@@ -116,9 +125,30 @@ export function normalizeOff(raw: unknown): ExternalFood | null {
   });
 }
 
+const OFF_SEARCH = "https://search.openfoodfacts.org/search";
+
+function productsFrom(data: unknown, key: "hits" | "products"): ExternalFood[] {
+  const parsed = z.object({ [key]: z.array(z.unknown()).max(100) }).safeParse(data);
+  if (!parsed.success) return [];
+  return (parsed.data[key] as unknown[]).map(normalizeOff).filter((f): f is ExternalFood => f !== null);
+}
+
+/**
+ * Tries Open Food Facts' fast search service first and falls back to the
+ * older (slower, more rate-limited) search endpoint if it fails or is empty.
+ */
 export async function searchOpenFoodFacts(query: string, fetchImpl: Fetch = fetch): Promise<ExternalFood[]> {
-  const url = new URL("/cgi/search.pl", OFF_BASE);
-  url.search = new URLSearchParams({
+  const fast = new URL(OFF_SEARCH);
+  fast.search = new URLSearchParams({ q: query, page_size: "15", fields: OFF_FIELDS }).toString();
+  try {
+    const results = productsFrom(await getJson(fast.toString(), fetchImpl), "hits");
+    if (results.length) return results;
+  } catch {
+    // fall through to the legacy endpoint
+  }
+
+  const legacy = new URL("/cgi/search.pl", OFF_BASE);
+  legacy.search = new URLSearchParams({
     search_terms: query,
     search_simple: "1",
     action: "process",
@@ -126,9 +156,7 @@ export async function searchOpenFoodFacts(query: string, fetchImpl: Fetch = fetc
     page_size: "15",
     fields: OFF_FIELDS,
   }).toString();
-  const data = z.object({ products: z.array(z.unknown()).max(100).default([]) }).safeParse(await getJson(url.toString(), fetchImpl));
-  if (!data.success) return [];
-  return data.data.products.map(normalizeOff).filter((f): f is ExternalFood => f !== null);
+  return productsFrom(await getJson(legacy.toString(), fetchImpl), "products");
 }
 
 export async function getOpenFoodFactsProduct(code: string, fetchImpl: Fetch = fetch): Promise<ExternalFood | null> {
@@ -164,11 +192,6 @@ const usdaFood = z.object({
   foodNutrients: z.array(usdaNutrient).max(500).default([]),
 });
 
-function titleCase(s: string) {
-  // USDA descriptions are often SHOUTED for branded foods.
-  return s === s.toUpperCase() ? s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase()) : s;
-}
-
 export function normalizeUsda(raw: unknown): ExternalFood | null {
   const parsed = usdaFood.safeParse(raw);
   if (!parsed.success) return null;
@@ -185,8 +208,8 @@ export function normalizeUsda(raw: unknown): ExternalFood | null {
   return finish({
     source: "usda",
     externalId: String(f.fdcId),
-    name: titleCase(f.description ?? ""),
-    brand: brand ? titleCase(brand) : null,
+    name: tidyName(f.description ?? ""),
+    brand: brand ? tidyName(brand) : null,
     barcode: f.gtinUpc && /^[0-9]{8,14}$/.test(f.gtinUpc) ? f.gtinUpc : null,
     per100g: {
       calories: clampNutrient(values.get("208") ?? values.get("958") ?? values.get("957"), 10000),
@@ -223,8 +246,24 @@ export async function getUsdaFood(fdcId: string, apiKey: string | undefined, fet
   return normalizeUsda(await getJson(url, fetchImpl));
 }
 
-/** Searches both sources; a failing or slow source just contributes nothing. */
+/**
+ * Searches both sources at once and interleaves the results so neither
+ * crowds the other out. A failing or slow source just contributes nothing.
+ */
 export async function searchExternal(query: string, apiKey: string | undefined, fetchImpl: Fetch = fetch) {
   const [off, usda] = await Promise.allSettled([searchOpenFoodFacts(query, fetchImpl), searchUsda(query, apiKey, fetchImpl)]);
-  return [...(usda.status === "fulfilled" ? usda.value : []), ...(off.status === "fulfilled" ? off.value : [])];
+  const a = off.status === "fulfilled" ? off.value : [];
+  const b = usda.status === "fulfilled" ? usda.value : [];
+  const merged: ExternalFood[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    for (const food of [a[i], b[i]]) {
+      if (!food) continue;
+      const key = `${food.name}|${food.brand ?? ""}`.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(food);
+    }
+  }
+  return merged;
 }
