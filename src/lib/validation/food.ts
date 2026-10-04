@@ -127,3 +127,38 @@ export const importRecipeSchema = z.object({
 });
 
 export const importedLineSchema = z.object({ recipeId: z.uuid(), index: z.coerce.number().int().min(0).max(59) });
+
+/** Foods confirmed from a meal photo (step 3d). Catalogue foods are re-read on the server; estimates are bounded like quick add. */
+const photoGrams = amount("grams", 2000).refine((n) => n > 0, "Enter grams");
+export const photoLogItemSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("food"), foodId: z.uuid(), grams: photoGrams }),
+  z
+    .object({
+      kind: z.literal("estimate"),
+      name: z.string().trim().min(1, "Enter a name").max(120),
+      grams: photoGrams,
+      caloriesPer100g: amount("calories", 900),
+      proteinPer100g: amount("protein", 100),
+      carbsPer100g: amount("carbs", 100),
+      fatPer100g: amount("fat", 100),
+    })
+    .refine((v) => v.proteinPer100g + v.carbsPer100g + v.fatPer100g <= 100.5, "Macros can't add up to more than 100 g per 100 g"),
+]);
+
+export const photoLogSchema = z.object({
+  meal: mealSchema,
+  date: dateSchema,
+  clientId,
+  items: z
+    .string()
+    .max(20_000)
+    .transform((s, ctx) => {
+      try {
+        return JSON.parse(s) as unknown;
+      } catch {
+        ctx.addIssue({ code: "custom", message: "Invalid items" });
+        return z.NEVER;
+      }
+    })
+    .pipe(z.array(photoLogItemSchema).min(1, "Pick at least one food").max(12)),
+});

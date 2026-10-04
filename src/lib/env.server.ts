@@ -12,6 +12,11 @@ const serverSchema = z.object({
   // data still work; healthDataKey() throws when it's missing.
   healthDataEncryptionKey: z.string().optional(),
   usdaApiKey: z.string().min(1).optional(),
+  // AI features (step 3d). Without a key the photo and coach features say they aren't set up.
+  geminiApiKey: z.string().min(1).optional(),
+  geminiModel: z.string().regex(/^[a-z0-9.-]{1,64}$/).optional(),
+  // Test-only override so browser tests can point at a local fake. Ignored in production.
+  geminiBaseUrl: z.url().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -27,6 +32,9 @@ export function serverEnv(): ServerEnv {
       ipHashSalt: process.env.IP_HASH_SALT,
       healthDataEncryptionKey: process.env.HEALTH_DATA_ENCRYPTION_KEY || undefined,
       usdaApiKey: process.env.USDA_API_KEY || undefined,
+      geminiApiKey: process.env.GEMINI_API_KEY || undefined,
+      geminiModel: process.env.GEMINI_MODEL || undefined,
+      geminiBaseUrl: process.env.NODE_ENV === "production" ? undefined : process.env.GEMINI_BASE_URL || undefined,
     },
     {
       supabaseServiceRoleKey: "SUPABASE_SERVICE_ROLE_KEY",
@@ -34,6 +42,9 @@ export function serverEnv(): ServerEnv {
       ipHashSalt: "IP_HASH_SALT (at least 16 characters)",
       healthDataEncryptionKey: "HEALTH_DATA_ENCRYPTION_KEY",
       usdaApiKey: "USDA_API_KEY",
+      geminiApiKey: "GEMINI_API_KEY",
+      geminiModel: "GEMINI_MODEL (a model code such as gemini-flash-latest)",
+      geminiBaseUrl: "GEMINI_BASE_URL",
     },
   );
   return cached;

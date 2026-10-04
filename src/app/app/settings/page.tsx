@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { disableTotp, logoutEverywhere } from "@/app/(auth)/actions";
+import { withdrawAiConsent } from "@/app/app/ai/actions";
 import { setHideNumbers } from "@/app/app/settings/actions";
 import { EnrollTotp } from "@/components/auth/mfa-forms";
 import { getProfile } from "@/lib/data/profile";
@@ -38,6 +39,24 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           </div>
         ) : (
           <EnrollTotp />
+        )}
+      </section>
+
+      <section aria-labelledby="ai-heading" className="card flex flex-col gap-3 p-5 sm:p-6">
+        <h2 id="ai-heading" className="font-display text-xl font-bold">
+          AI features
+        </h2>
+        <p className="text-sm">
+          Meal photos and the coach send your photos and messages to Google&apos;s Gemini AI, which may use them to improve its products.
+          We never send your name or email.
+        </p>
+        {profile?.ai_consent_at ? (
+          <form action={withdrawAiConsent} className="flex flex-wrap items-center gap-3">
+            <span className="badge bg-leaf text-surface">Allowed</span>
+            <button className="btn btn-sm">Turn off AI features</button>
+          </form>
+        ) : (
+          <p className="text-sm text-muted">Off. You&apos;ll be asked before you first use meal photos or the coach.</p>
         )}
       </section>
 

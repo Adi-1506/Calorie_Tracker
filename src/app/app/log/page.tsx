@@ -3,6 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BarcodeScanner } from "@/components/app/barcode-scanner";
+import { MealPhoto } from "@/components/app/meal-photo";
+import { aiConfigured } from "@/lib/ai/provider";
 import { AddExternalRow, AddFoodRow, QuickAddForm } from "@/components/app/log-forms";
 import { requireUser } from "@/lib/auth";
 import { getProfile, profileToday } from "@/lib/data/profile";
@@ -151,6 +153,16 @@ export default async function LogPage({ searchParams }: PageProps<"/app/log">) {
         </form>
         <BarcodeScanner meal={meal} date={date} />
       </div>
+
+      {!query.success && (
+        <MealPhoto
+          meal={meal}
+          date={date}
+          consented={Boolean(profile.ai_consent_at)}
+          configured={aiConfigured()}
+          hideNumbers={profile.hide_numbers}
+        />
+      )}
 
       {limited && (
         <p role="alert" className="notice notice-warn">

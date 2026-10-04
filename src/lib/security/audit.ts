@@ -17,7 +17,10 @@ export type AuditAction =
   | "mfa_enrolled"
   | "mfa_verified"
   | "mfa_failed"
-  | "mfa_disabled";
+  | "mfa_disabled"
+  | "ai_consent_given"
+  | "ai_consent_withdrawn"
+  | "ai_quota_reached";
 
 /**
  * Appends to the immutable audit log (security item 31). Never pass health

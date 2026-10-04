@@ -278,4 +278,21 @@ select tests.throws($$insert into public.recipe_ingredients (recipe_id, food_id,
 select tests.throws($$insert into public.recipes (name, imported_ingredients) values ('x', array_fill('a'::text, array[61]))$$, '23514');
 reset role;
 
+-- ---------------------------------------------------------------------------
+-- AI quotas (step 3d, item 36): server-only, stops at the limit
+-- ---------------------------------------------------------------------------
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}', false);
+select tests.throws($$select public.consume_ai_quota(auth.uid(), 'photo', 100)$$, '42501');
+select tests.throws($$select public.record_ai_tokens(auth.uid(), 'photo', 1)$$, '42501');
+reset role;
+
+set role service_role;
+select tests.eq((select public.consume_ai_quota('00000000-0000-0000-0000-0000000000e1', 'coach', 2))::int, (true)::int, 'first AI request allowed');
+select tests.eq((select public.consume_ai_quota('00000000-0000-0000-0000-0000000000e1', 'coach', 2))::int, (true)::int, 'second AI request allowed');
+select tests.eq((select public.consume_ai_quota('00000000-0000-0000-0000-0000000000e1', 'coach', 2))::int, (false)::int, 'third AI request refused at the limit');
+select tests.eq((select public.consume_ai_quota('00000000-0000-0000-0000-0000000000e1', 'photo', 2))::int, (true)::int, 'quotas are per feature');
+reset role;
+select tests.throws($$select public.consume_ai_quota('00000000-0000-0000-0000-0000000000e1', 'other', 2)$$, '23514');
+
 \echo 'All RLS tests passed.'

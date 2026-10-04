@@ -48,6 +48,16 @@ npm run dev                  # http://localhost:3000
    - The default email sender is heavily rate limited; set up custom SMTP (e.g. Resend's free tier) before launch.
 4. Copy the project URL and anon key into `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) and the service-role key into `SUPABASE_SERVICE_ROLE_KEY` (**Project Settings → API**). The service-role key is server-only and must never get a `NEXT_PUBLIC_` prefix. Generate `IP_HASH_SALT` with `openssl rand -hex 32` and `HEALTH_DATA_ENCRYPTION_KEY` with `openssl rand -base64 32` (on Windows without OpenSSL: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`). Keep a safe copy of the encryption key: if it's lost, stored weights can't be read.
 
+### AI features (optional, free)
+
+Meal-photo recognition and the coach use Google Gemini's free tier.
+
+1. Sign in at https://aistudio.google.com/apikey and click **Create API key**.
+2. Put it in `.env.local` as `GEMINI_API_KEY=...` (and in Vercel's environment variables for the live site). Never paste it into chats or commit it.
+3. Restart `npm run dev`.
+
+Without a key the app still works; the photo and coach features just say they aren't set up. Users are asked before their first AI use, because Google may use free-tier data to improve its products. Each user gets 10 meal photos and 30 coach messages a day, and the whole site is capped at 1,000 AI requests a day.
+
 ### Supabase (local, optional)
 
 With Docker running, `npx supabase start` runs the whole stack locally using `supabase/config.toml` and applies the migrations. Emails appear in the local inbox at http://localhost:54324.
