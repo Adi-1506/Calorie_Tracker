@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const { getOpenFoodFactsProduct, normalizeOff, normalizeUsda, searchExternal } = await import("./external");
+const { getOpenFoodFactsProduct, normalizeOff, normalizeUsda, searchExternal, searchOpenFoodFacts, tidyName } = await import("./external");
 
 const offProduct = {
   code: "8901063010338",
@@ -83,7 +83,7 @@ describe("searchExternal", () => {
   it("merges both sources and survives one failing", async () => {
     const fetchImpl = vi.fn(async (url: string | URL | Request) => {
       const u = String(url);
-      if (u.includes("openfoodfacts")) return jsonResponse({ products: [offProduct, { code: "x" }] });
+      if (u.includes("search.openfoodfacts")) return jsonResponse({ hits: [offProduct, { code: "x" }] });
       return jsonResponse({}, 500);
     }) as unknown as typeof fetch;
     const results = await searchExternal("marie", undefined, fetchImpl);
@@ -98,5 +98,44 @@ describe("searchExternal", () => {
     expect((init.headers as Record<string, string>)["User-Agent"]).toMatch(/CalorieTracker/);
     expect(init.redirect).toBe("error");
     expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe("Open Food Facts search", () => {
+  it("uses the fast search service and accepts brand lists", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ hits: [{ ...offProduct, brands: ["Maggi", "Nestlé"] }] }));
+    const results = await searchOpenFoodFacts("maggi", fetchImpl as unknown as typeof fetch);
+    expect(String((fetchImpl.mock.calls[0] as unknown[])[0])).toContain("search.openfoodfacts.org/search?q=maggi");
+    expect(results[0].brand).toBe("Maggi");
+  });
+
+  it("falls back to the legacy endpoint when the fast one fails", async () => {
+    const fetchImpl = vi.fn(async (url: string | URL | Request) =>
+      String(url).includes("search.openfoodfacts") ? jsonResponse({}, 503) : jsonResponse({ products: [offProduct] }),
+    );
+    const results = await searchOpenFoodFacts("marie", fetchImpl as unknown as typeof fetch);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(results).toHaveLength(1);
+  });
+});
+
+describe("searchExternal ordering", () => {
+  it("interleaves sources and removes duplicates", async () => {
+    const usdaItem = (id: number, name: string) => ({ ...usdaFood, fdcId: id, description: name });
+    const fetchImpl = vi.fn(async (url: string | URL | Request) =>
+      String(url).includes("openfoodfacts")
+        ? jsonResponse({ hits: [offProduct, { ...offProduct, code: "123", product_name: "Masala noodles" }] })
+        : jsonResponse({ foods: [usdaItem(1, "Avocado"), usdaItem(2, "Avocado"), usdaItem(3, "Lime")] }),
+    ) as unknown as typeof fetch;
+    const names = (await searchExternal("x", undefined, fetchImpl)).map((f) => f.name);
+    expect(names).toEqual(["Marie biscuits", "Avocado", "Masala noodles", "Lime"]);
+  });
+});
+
+describe("tidyName", () => {
+  it("only lowercases shouted words", () => {
+    expect(tidyName("MAGGI 2-MINUTE NOODLES Mas 280g")).toBe("Maggi 2-Minute Noodles Mas 280g");
+    expect(tidyName("Marie biscuits")).toBe("Marie biscuits");
+    expect(tidyName("MAGGI Hot & Spicy Seasoning 3.38floz")).toBe("Maggi Hot & Spicy Seasoning 3.38floz");
   });
 });
