@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getApiUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Serves one progress photo to its owner. The row is read with the user's own
@@ -9,10 +9,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/app/prog
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return new Response("Not found", { status: 404 });
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, supabase } = await getApiUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
 
   const { data } = await supabase.from("progress_photos").select("storage_path").eq("id", id).maybeSingle();

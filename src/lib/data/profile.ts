@@ -16,6 +16,7 @@ export type Profile = {
   allergies: string[];
   timezone: string;
   hide_numbers: boolean;
+  ai_consent_at: string | null;
   onboarding_completed_at: string | null;
 };
 
@@ -31,7 +32,7 @@ export type TargetsRow = {
 };
 
 const PROFILE_COLUMNS =
-  "id, display_name, date_of_birth, sex, height_cm, activity_level, goal, diet_type, allergies, timezone, hide_numbers, onboarding_completed_at";
+  "id, display_name, date_of_birth, sex, height_cm, activity_level, goal, diet_type, allergies, timezone, hide_numbers, ai_consent_at, onboarding_completed_at";
 
 export async function getProfile(supabase: SupabaseClient, userId: string): Promise<Profile | null> {
   const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", userId).maybeSingle();

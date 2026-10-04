@@ -18,7 +18,10 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
         </div>
         <nav aria-label="Main" className="mt-3 flex flex-wrap items-center gap-1">
           <NavLinks />
-          <form action={logout} className="ml-auto">
+          <Link href="/app/settings" className="ml-auto flex min-h-10 items-center rounded-full px-3 text-sm font-medium text-muted hover:text-ink">
+            Settings
+          </Link>
+          <form action={logout}>
             <button className="flex min-h-10 items-center rounded-full px-3 text-sm font-medium text-muted hover:text-ink">Log out</button>
           </form>
         </nav>

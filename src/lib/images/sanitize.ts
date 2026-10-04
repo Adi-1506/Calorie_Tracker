@@ -24,10 +24,10 @@ export function detectImageType(bytes: Uint8Array): ImageKind | null {
  * (EXIF, GPS, XMP, ICC comments) and any bytes smuggled after the image data.
  * The EXIF orientation is applied first so photos stay the right way up.
  */
-export async function sanitizeImage(input: Uint8Array): Promise<Buffer> {
+export async function sanitizeImage(input: Uint8Array, maxSide = 2048): Promise<Buffer> {
   return sharp(input, { limitInputPixels: 50_000_000, failOn: "error" })
     .rotate()
-    .resize({ width: 2048, height: 2048, fit: "inside", withoutEnlargement: true })
+    .resize({ width: maxSide, height: maxSide, fit: "inside", withoutEnlargement: true })
     .webp({ quality: 82 })
     .toBuffer();
 }

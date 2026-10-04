@@ -1,10 +1,12 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { getProfile, profileAge, profileToday } from "@/lib/data/profile";
+import { getAdaptiveSuggestion } from "@/lib/data/adaptive";
+import { getProfile, getTargets, profileAge, profileToday } from "@/lib/data/profile";
 import { serverEnv, isProduction } from "@/lib/env.server";
 import { getOpenFoodFactsProduct, getUsdaFood, type ExternalFood } from "@/lib/food/external";
 import { importExternalFood } from "@/lib/food/import";
@@ -30,6 +32,7 @@ import {
   deleteEntrySchema,
   logExternalFoodSchema,
   logFoodSchema,
+  photoLogSchema,
   quickAddSchema,
   waterSchema,
 } from "@/lib/validation/food";
@@ -287,6 +290,65 @@ export async function quickAdd(_prev: FormState, formData: FormData): Promise<Fo
   backToDay(v.date, ctx.today);
 }
 
+/** Logs the foods the user confirmed from a meal photo, all in one insert. */
+export async function logPhotoMeal(_prev: FormState, formData: FormData): Promise<FormState> {
+  const ctx = await loggingContext();
+  const parsed = photoLogSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { status: "error", message: parsed.error.issues[0]?.message ?? GENERIC };
+  const v = parsed.data;
+  if (!reasonableDate(v.date, ctx.today)) return { status: "error", message: "Pick a date within the last year." };
+  if (!(await rateLimitUser("logWrite", ctx.user.id))) return { status: "error", message: SLOW_DOWN };
+
+  const ids = [...new Set(v.items.flatMap((i) => (i.kind === "food" ? [i.foodId] : [])))];
+  const { data: foods } = ids.length
+    ? await ctx.supabase.from("foods").select("id, name, brand, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g, sodium_mg").in("id", ids)
+    : { data: [] };
+  const byId = new Map((foods ?? []).map((f) => [f.id as string, f]));
+
+  const rows = [];
+  for (const [index, item] of v.items.entries()) {
+    const base = {
+      user_id: ctx.user.id,
+      meal: v.meal,
+      logged_on: v.date,
+      grams: item.grams,
+      client_id: v.clientId ? derivedClientId(v.clientId, index) : undefined,
+    };
+    if (item.kind === "food") {
+      const food = byId.get(item.foodId);
+      if (!food) return { status: "error", message: "One of those foods couldn't be found. Use the AI estimate instead." };
+      rows.push({
+        ...base,
+        label: `${food.name}${food.brand ? ` (${food.brand})` : ""}, ${item.grams} g`.slice(0, 200),
+        food_id: food.id,
+        ...snapshotFor(food, item.grams),
+        is_quick_add: false,
+      });
+    } else {
+      rows.push({
+        ...base,
+        label: `${item.name}, ${item.grams} g (photo estimate)`.slice(0, 200),
+        food_id: null,
+        ...snapshotFor(
+          { calories: item.caloriesPer100g, protein_g: item.proteinPer100g, carbs_g: item.carbsPer100g, fat_g: item.fatPer100g },
+          item.grams,
+        ),
+        is_quick_add: true,
+      });
+    }
+  }
+
+  const { error } = await ctx.supabase.from("meal_entries").insert(rows);
+  if (error && error.code !== "23505") return { status: "error", message: GENERIC };
+  backToDay(v.date, ctx.today);
+}
+
+/** A stable per-item idempotency key from the form's one client id, so a double submit can't log twice. */
+function derivedClientId(clientId: string, index: number) {
+  const hex = createHash("sha256").update(`${clientId}:${index}`).digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
 export async function createCustomFood(_prev: FormState, formData: FormData): Promise<FormState> {
   const ctx = await loggingContext();
   const parsed = customFoodSchema.safeParse(Object.fromEntries(formData));
@@ -502,4 +564,32 @@ export async function dismissImportedLine(formData: FormData): Promise<void> {
   const lines = (data.imported_ingredients as string[]).filter((_, i) => i !== parsed.data.index);
   await supabase.from("recipes").update({ imported_ingredients: lines }).eq("id", parsed.data.recipeId);
   refresh();
+}
+
+/** Applies this week's adaptive target. Recomputed here; nothing from the form is trusted. */
+export async function applyAdaptiveTarget(): Promise<void> {
+  const { user, supabase } = await requireUser();
+  const profile = await getProfile(supabase, user.id);
+  if (!profile?.onboarding_completed_at) redirect("/app/onboarding");
+  const suggestion = await getAdaptiveSuggestion(supabase, user.id, profile);
+  const today = profileToday(profile);
+  const current = await getTargets(supabase, today);
+  if (!suggestion || !current) redirect("/app/targets");
+
+  // Keep protein in grams; move carbs and fat in proportion to the calorie change.
+  const ratio = (suggestion.calories - current.protein_g * 4) / Math.max(current.calories - current.protein_g * 4, 1);
+  const { error } = await supabase.from("nutrition_targets").upsert(
+    {
+      effective_from: today,
+      calories: suggestion.calories,
+      protein_g: current.protein_g,
+      carbs_g: Math.max(0, Math.round(current.carbs_g * ratio)),
+      fat_g: Math.max(0, Math.round(current.fat_g * ratio)),
+      water_ml: current.water_ml,
+      source: "adaptive",
+    },
+    { onConflict: "user_id,effective_from" },
+  );
+  if (!error) await audit("targets_changed", { userId: user.id });
+  redirect("/app/targets?adjusted=1");
 }

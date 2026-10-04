@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getApiUser } from "@/lib/auth";
 import { getProfile, getTargets, profileToday } from "@/lib/data/profile";
 import { getWeights } from "@/lib/data/progress";
 import { addDays } from "@/lib/dates";
@@ -8,10 +8,7 @@ import { rateLimitUser } from "@/lib/security/rate-limit";
 // A 30-day PDF summary of the signed-in user's own log.
 
 export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, supabase } = await getApiUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
   if (!(await rateLimitUser("dataExport", user.id))) return new Response("Too many exports. Please try again later.", { status: 429 });
 

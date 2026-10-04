@@ -6,6 +6,7 @@ export const LIMITS = {
   login: { limit: 5, windowSeconds: 15 * 60 },
   signup: { limit: 5, windowSeconds: 60 * 60 },
   passwordReset: { limit: 3, windowSeconds: 60 * 60 },
+  mfaVerify: { limit: 10, windowSeconds: 15 * 60 },
   // Per signed-in user. External lookups hit third-party APIs, so they're tighter.
   foodSearch: { limit: 60, windowSeconds: 60 },
   externalFood: { limit: 30, windowSeconds: 60 },
@@ -13,6 +14,11 @@ export const LIMITS = {
   recipeImport: { limit: 10, windowSeconds: 60 * 60 },
   photoUpload: { limit: 20, windowSeconds: 60 * 60 },
   dataExport: { limit: 20, windowSeconds: 60 * 60 },
+  // AI (item 36): a short burst limit per user, plus one cap for the whole site
+  // so the provider's free-tier quota can't be drained. Daily per-user quotas
+  // live in ai_usage (src/lib/ai/access.ts).
+  aiBurst: { limit: 6, windowSeconds: 60 },
+  aiGlobal: { limit: 1000, windowSeconds: 24 * 60 * 60 },
 } as const;
 
 export type LimitName = keyof typeof LIMITS;
@@ -40,6 +46,17 @@ export async function rateLimitUser(name: LimitName, userId: string): Promise<bo
   const { limit, windowSeconds } = LIMITS[name];
   const { data, error } = await createAdminClient().rpc("check_rate_limit", {
     p_key: `${name}:user:${hashIdentifier(userId)}`,
+    p_limit: limit,
+    p_window_seconds: windowSeconds,
+  });
+  return !error && data === true;
+}
+
+/** One shared counter for the whole site (cost caps). Fails closed. */
+export async function rateLimitGlobal(name: LimitName): Promise<boolean> {
+  const { limit, windowSeconds } = LIMITS[name];
+  const { data, error } = await createAdminClient().rpc("check_rate_limit", {
+    p_key: `${name}:global`,
     p_limit: limit,
     p_window_seconds: windowSeconds,
   });

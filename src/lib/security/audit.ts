@@ -13,7 +13,14 @@ export type AuditAction =
   | "bot_check_failed"
   | "onboarding_completed"
   | "targets_changed"
-  | "custom_food_created";
+  | "custom_food_created"
+  | "mfa_enrolled"
+  | "mfa_verified"
+  | "mfa_failed"
+  | "mfa_disabled"
+  | "ai_consent_given"
+  | "ai_consent_withdrawn"
+  | "ai_quota_reached";
 
 /**
  * Appends to the immutable audit log (security item 31). Never pass health

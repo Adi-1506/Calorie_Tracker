@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { getApiUser, needsSecondFactor } from "@/lib/auth";
 import { publicEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -44,7 +45,7 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
   const { ip, ipHash } = await requestContext();
   const destination = safeRedirectPath(next);
 
-  const result = await withMinimumDuration(MIN_AUTH_RESPONSE_MS, async (): Promise<FormState | "ok"> => {
+  const result = await withMinimumDuration(MIN_AUTH_RESPONSE_MS, async (): Promise<FormState | "ok" | "mfa"> => {
     if (website) return { status: "error", message: "Email or password is incorrect." };
     if (!(await rateLimit("login", ipHash, email))) {
       await audit("rate_limited", { ipHash, metadata: { action: "login" } });
@@ -63,9 +64,10 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
       return { status: "error", message: "Email or password is incorrect." };
     }
     await audit("login", { userId: data.user.id, ipHash });
-    return "ok";
+    return (await needsSecondFactor(supabase)) ? "mfa" : "ok";
   });
 
+  if (result === "mfa") redirect(`/login/mfa?${new URLSearchParams({ next: destination })}`);
   if (result !== "ok") return result;
   redirect(destination);
 }
@@ -194,4 +196,72 @@ export async function logoutEverywhere(): Promise<void> {
   await supabase.auth.signOut({ scope: "global" });
   if (user) await audit("logout_everywhere", { userId: user.id });
   redirect("/login");
+}
+
+// ---------------------------------------------------------------------------
+// Two-factor login (security item 23)
+// ---------------------------------------------------------------------------
+
+const codeSchema = z.object({ code: z.string().trim().regex(/^[0-9]{6}$/, "Enter the 6-digit code"), next: z.string().optional() });
+
+async function verifiedTotp(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data } = await supabase.auth.mfa.listFactors();
+  return data?.totp.find((f) => f.status === "verified") ?? null;
+}
+
+export async function verifyMfaLogin(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = codeSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  if (!(await rateLimit("mfaVerify", hashIdentifier(user.id)))) return { status: "error", message: TOO_MANY };
+
+  const factor = await verifiedTotp(supabase);
+  if (!factor) redirect(safeRedirectPath(parsed.data.next));
+  const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: factor.id, code: parsed.data.code });
+  if (error) {
+    await audit("mfa_failed", { userId: user.id });
+    return { status: "error", fieldErrors: { code: ["That code didn't work. Check the time on your phone and try again."] } };
+  }
+  await audit("mfa_verified", { userId: user.id });
+  redirect(safeRedirectPath(parsed.data.next));
+}
+
+export type EnrollState = FormState & { factorId?: string; qr?: string; secret?: string };
+
+export async function startTotpEnrollment(): Promise<EnrollState> {
+  const { user, supabase } = await getApiUser();
+  if (!user) return { status: "error", message: "Please log in again." };
+  // Clear any half-finished setup first, so only one pending factor exists.
+  const { data } = await supabase.auth.mfa.listFactors();
+  for (const f of data?.all ?? []) if (f.status === "unverified") await supabase.auth.mfa.unenroll({ factorId: f.id });
+  const { data: enrolled, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `Authenticator ${Date.now()}` });
+  if (error || !enrolled) return { status: "error", message: "Couldn't start two-factor setup. Please try again." };
+  return { status: "idle", factorId: enrolled.id, qr: enrolled.totp.qr_code, secret: enrolled.totp.secret };
+}
+
+export async function confirmTotpEnrollment(prev: EnrollState, formData: FormData): Promise<EnrollState> {
+  const { user, supabase } = await getApiUser();
+  if (!user) return { status: "error", message: "Please log in again." };
+  const parsed = codeSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ...prev, ...invalid(parsed.error) };
+  if (!prev.factorId) return { status: "error", message: "Start setup again." };
+  if (!(await rateLimit("mfaVerify", hashIdentifier(user.id)))) return { ...prev, status: "error", message: TOO_MANY };
+  const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: prev.factorId, code: parsed.data.code });
+  if (error) return { ...prev, status: "error", fieldErrors: { code: ["That code didn't work. Try the newest code from your app."] } };
+  await audit("mfa_enrolled", { userId: user.id });
+  return { status: "success", message: "Two-factor login is on." };
+}
+
+export async function disableTotp(): Promise<void> {
+  const { user, supabase } = await getApiUser();
+  if (!user) redirect("/login");
+  const { data } = await supabase.auth.mfa.listFactors();
+  // Removing a verified factor needs an aal2 session, which getApiUser guarantees.
+  for (const f of data?.all ?? []) await supabase.auth.mfa.unenroll({ factorId: f.id });
+  await audit("mfa_disabled", { userId: user.id });
+  redirect("/app/settings?mfa=off");
 }
