@@ -19,6 +19,7 @@ import { encryptHealthValue, hasHealthDataKey } from "@/lib/security/health-cryp
 import { rateLimitUser } from "@/lib/security/rate-limit";
 import type { FormState } from "@/lib/validation/auth";
 import { combine, getRecipe } from "@/lib/data/recipes";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   copyEntriesSchema,
   customFoodSchema,
@@ -75,7 +76,18 @@ export async function completeOnboarding(_prev: FormState, formData: FormData): 
     return { status: "error", message: GENERIC };
   }
 
-  const { error: profileError } = await supabase
+  // The signup trigger normally creates this row. Accounts made before the
+  // migrations ran have none, and an update would then silently match nothing
+  // and send the user straight back here, so create it first.
+  const { error: ensureError } = await createAdminClient()
+    .from("profiles")
+    .upsert({ id: user.id }, { onConflict: "id", ignoreDuplicates: true });
+  if (ensureError) {
+    console.error("could not ensure profile row", ensureError.code);
+    return { status: "error", message: GENERIC };
+  }
+
+  const { data: updated, error: profileError } = await supabase
     .from("profiles")
     .update({
       display_name: v.displayName || null,
@@ -89,7 +101,12 @@ export async function completeOnboarding(_prev: FormState, formData: FormData): 
       timezone: v.timezone,
       onboarding_completed_at: new Date().toISOString(),
     })
-    .eq("id", user.id);
+    .eq("id", user.id)
+    .select("id");
+  if (!profileError && !updated?.length) {
+    console.error("onboarding update matched no profile row");
+    return { status: "error", message: GENERIC };
+  }
   if (profileError) {
     // The database trigger is the last line of defence for item 50.
     if (profileError.code === "23514") {
