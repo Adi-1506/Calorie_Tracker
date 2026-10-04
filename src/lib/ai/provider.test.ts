@@ -51,6 +51,27 @@ describe("AI provider (Gemini)", () => {
     expect(body.systemInstruction.parts[0].text).toBe("sys");
   });
 
+  it("falls back to the lighter model when the default one is busy", async () => {
+    const { generate } = await load({ GEMINI_API_KEY: "k" });
+    const urls: string[] = [];
+    const answer = { candidates: [{ content: { parts: [{ text: "hi" }] } }] };
+    const fetchImpl = (async (url: string) => {
+      urls.push(url);
+      return urls.length === 1 ? ok({ error: { message: "overloaded" } }, 503) : ok(answer);
+    }) as unknown as typeof fetch;
+    await expect(generate(req, fetchImpl)).resolves.toMatchObject({ text: "hi" });
+    expect(urls[0]).toContain("/models/gemini-flash-latest:");
+    expect(urls[1]).toContain("/models/gemini-flash-lite-latest:");
+  });
+
+  it("uses only an explicitly configured model", async () => {
+    const { generate } = await load({ GEMINI_API_KEY: "k", GEMINI_MODEL: "my-model" });
+    let calls = 0;
+    const fetchImpl = (async () => (calls++, ok({}, 429))) as unknown as typeof fetch;
+    await expect(generate(req, fetchImpl)).rejects.toMatchObject({ kind: "busy" });
+    expect(calls).toBe(1);
+  });
+
   it("maps errors: rate limits, blocks and empty answers", async () => {
     const { generate } = await load({ GEMINI_API_KEY: "k" });
     await expect(generate(req, (async () => ok({}, 429)) as unknown as typeof fetch)).rejects.toMatchObject({ kind: "busy" });
