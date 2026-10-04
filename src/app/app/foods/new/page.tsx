@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { isIsoDate } from "@/lib/dates";
 import { mealSchema } from "@/lib/validation/food";
 
-export const metadata: Metadata = { title: "New food | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "New food | Kalo", robots: { index: false } };
 
 export default async function NewFoodPage({ searchParams }: PageProps<"/app/foods/new">) {
   await requireUser();

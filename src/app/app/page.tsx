@@ -11,7 +11,7 @@ import { habitSummary } from "@/lib/habits/summary";
 import { sumEntries } from "@/lib/nutrition/snapshot";
 import { MEALS } from "@/lib/validation/food";
 
-export const metadata: Metadata = { title: "Today | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Today | Kalo", robots: { index: false } };
 
 type Entry = {
   id: string;

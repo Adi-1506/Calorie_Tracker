@@ -10,7 +10,7 @@ import { importExternalFood } from "@/lib/food/import";
 import { rateLimitUser } from "@/lib/security/rate-limit";
 import { mealSchema } from "@/lib/validation/food";
 
-export const metadata: Metadata = { title: "Scanned product | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Scanned product | Kalo", robots: { index: false } };
 
 type FoodRow = {
   id: string;

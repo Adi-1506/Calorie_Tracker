@@ -11,7 +11,7 @@ import { formatDayLabel } from "@/lib/dates";
 import { trailingAverage, weeklyChange } from "@/lib/nutrition/trend";
 import { MEASUREMENTS } from "@/lib/validation/progress";
 
-export const metadata: Metadata = { title: "Progress | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Progress | Kalo", robots: { index: false } };
 
 const removeButton = "flex size-9 items-center justify-center rounded-lg text-muted hover:bg-well hover:text-danger";
 

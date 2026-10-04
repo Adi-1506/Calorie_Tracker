@@ -6,7 +6,7 @@ export default function Home() {
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-10 px-6 py-20 sm:flex-row sm:items-center">
       <div className="flex flex-1 flex-col gap-6">
         <p className="font-display text-xl font-extrabold tracking-tight">
-          Calorie Tracker<span className="text-turmeric">.</span>
+          Kalo<span className="text-turmeric">.</span>
         </p>
         <h1 className="font-display text-[2.75rem] font-extrabold leading-[1.02] tracking-tight sm:text-6xl">
           Everything on your plate, counted.

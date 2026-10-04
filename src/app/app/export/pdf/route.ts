@@ -45,7 +45,7 @@ export async function GET() {
   return new Response(Buffer.from(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="calorie-tracker-report-${to}.pdf"`,
+      "Content-Disposition": `attachment; filename="kalo-report-${to}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

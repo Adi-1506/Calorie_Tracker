@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth";
 import { getLatestWeightKg, getProfile, getTargets, profileAge, profileToday } from "@/lib/data/profile";
 import { bmr, CALORIE_FLOOR, suggestTargets, tdee } from "@/lib/nutrition/targets";
 
-export const metadata: Metadata = { title: "Your targets | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Your targets | Kalo", robots: { index: false } };
 
 export default async function TargetsPage({ searchParams }: PageProps<"/app/targets">) {
   const { user, supabase } = await requireUser();

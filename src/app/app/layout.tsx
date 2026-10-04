@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
       <header className="mx-auto w-full max-w-3xl px-4 pt-4 sm:px-6">
         <div className="flex items-center justify-between gap-3">
           <Link href="/app" className="font-display text-[1.375rem] font-extrabold tracking-tight">
-            Calorie Tracker<span className="text-turmeric">.</span>
+            Kalo<span className="text-turmeric">.</span>
           </Link>
           <Link href="/app/log" className="btn btn-primary">
             + Log food

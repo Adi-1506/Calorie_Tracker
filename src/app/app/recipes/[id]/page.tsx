@@ -10,7 +10,7 @@ import { ingredientSearchTerm } from "@/lib/food/recipe-parse";
 import { rateLimitUser } from "@/lib/security/rate-limit";
 import { searchQuerySchema } from "@/lib/validation/food";
 
-export const metadata: Metadata = { title: "Recipe | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Recipe | Kalo", robots: { index: false } };
 
 type FoodRow = { id: string; name: string; brand: string | null; calories: number };
 

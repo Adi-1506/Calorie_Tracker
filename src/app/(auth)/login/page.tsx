@@ -5,7 +5,7 @@ import { getNonce, turnstileSiteKey } from "@/lib/nonce";
 import { safeRedirectPath } from "@/lib/security/redirect";
 
 export const metadata: Metadata = {
-  title: "Log in | Calorie Tracker",
+  title: "Log in | Kalo",
   description: "Log in to track your meals, calories and nutrition.",
   robots: { index: false },
 };

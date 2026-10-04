@@ -4,8 +4,8 @@ import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Choose a new password | Calorie Tracker",
-  description: "Set a new password for your Calorie Tracker account.",
+  title: "Choose a new password | Kalo",
+  description: "Set a new password for your Kalo account.",
   robots: { index: false },
 };
 

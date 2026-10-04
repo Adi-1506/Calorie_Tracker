@@ -3,7 +3,7 @@ import { OnboardingForm } from "@/components/app/onboarding-form";
 import { requireUser } from "@/lib/auth";
 import { getLatestWeightKg, getProfile } from "@/lib/data/profile";
 
-export const metadata: Metadata = { title: "Your details | Calorie Tracker", robots: { index: false } };
+export const metadata: Metadata = { title: "Your details | Kalo", robots: { index: false } };
 
 export default async function OnboardingPage() {
   const { user, supabase } = await requireUser();
