@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const { getOpenFoodFactsProduct, normalizeOff, normalizeUsda, searchExternal, searchOpenFoodFacts, tidyName } = await import("./external");
+const { getOpenFoodFactsProduct, normalizeOff, normalizeUsda, searchExternal, searchOpenFoodFacts, tidyName, countryForTimeZone } = await import("./external");
 
 const offProduct = {
   code: "8901063010338",
@@ -137,5 +137,23 @@ describe("tidyName", () => {
     expect(tidyName("MAGGI 2-MINUTE NOODLES Mas 280g")).toBe("Maggi 2-Minute Noodles Mas 280g");
     expect(tidyName("Marie biscuits")).toBe("Marie biscuits");
     expect(tidyName("MAGGI Hot & Spicy Seasoning 3.38floz")).toBe("Maggi Hot & Spicy Seasoning 3.38floz");
+  });
+});
+
+describe("Open Food Facts ranking", () => {
+  it("puts products sold in the user's country and English names first", async () => {
+    const hits = [
+      { ...offProduct, code: "1", product_name: "ผลิตภัณฑ์นม", countries_tags: ["en:thailand"] },
+      { ...offProduct, code: "2", product_name: "Thurles Fresh Milk", countries_tags: ["en:ireland"] },
+      { ...offProduct, code: "3", product_name: "Amul Taaza", countries_tags: ["en:india"] },
+    ];
+    const fetchImpl = vi.fn(async () => jsonResponse({ hits }));
+    const names = (await searchOpenFoodFacts("milk", fetchImpl as unknown as typeof fetch, { country: "en:india" })).map((f) => f.name);
+    expect(names).toEqual(["Amul Taaza", "Thurles Fresh Milk", "ผลิตภัณฑ์นม"]);
+  });
+
+  it("maps time zones to countries", () => {
+    expect(countryForTimeZone("Asia/Kolkata")).toBe("en:india");
+    expect(countryForTimeZone("Mars/Base")).toBeUndefined();
   });
 });

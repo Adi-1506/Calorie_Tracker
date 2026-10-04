@@ -39,6 +39,7 @@ npm run dev                  # http://localhost:3000
    npx supabase link --project-ref <your-project-ref>
    npx supabase db push
    ```
+   Run `npx supabase db push` again whenever you pull changes that add files to `supabase/migrations/`.
 3. In the Supabase dashboard:
    - **Authentication → Sign In / Providers → Email:** keep **Confirm email** on, and set the minimum password length to **12**. Turn on **Secure password change**.
    - **Authentication → URL Configuration:** set **Site URL** to your site (e.g. `http://localhost:3000` for local use, your Vercel URL in production) and add `http://localhost:3000/**` and `https://<your-domain>/**` to **Redirect URLs**.

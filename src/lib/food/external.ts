@@ -31,7 +31,7 @@ const OFF_BASE = "https://world.openfoodfacts.org";
 const USDA_BASE = "https://api.nal.usda.gov/fdc/v1";
 const USER_AGENT = "CalorieTracker/0.1 (https://github.com/Adi-1506/Calorie_Tracker)";
 const TIMEOUT_MS = 5000;
-const OFF_FIELDS = "code,product_name,product_name_en,brands,nutriments,serving_size,serving_quantity";
+const OFF_FIELDS = "code,product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,countries_tags";
 
 type Fetch = typeof fetch;
 
@@ -127,21 +127,41 @@ export function normalizeOff(raw: unknown): ExternalFood | null {
 
 const OFF_SEARCH = "https://search.openfoodfacts.org/search";
 
-function productsFrom(data: unknown, key: "hits" | "products"): ExternalFood[] {
+const LATIN_TEXT = /^[\p{Script=Latin}\p{N}\p{P}\p{S}\s]+$/u;
+
+export type SearchOptions = {
+  /** Open Food Facts country tag to rank first, e.g. "en:india". */
+  country?: string;
+};
+
+/** Higher is better: products sold in the user's country, then names in Latin script. */
+function offScore(raw: unknown, country?: string) {
+  const r = (raw ?? {}) as { countries_tags?: unknown; product_name?: unknown };
+  const tags = Array.isArray(r.countries_tags) ? r.countries_tags : [];
+  const name = typeof r.product_name === "string" ? r.product_name : "";
+  return (country && tags.includes(country) ? 2 : 0) + (LATIN_TEXT.test(name) ? 1 : 0);
+}
+
+function productsFrom(data: unknown, key: "hits" | "products", options: SearchOptions): ExternalFood[] {
   const parsed = z.object({ [key]: z.array(z.unknown()).max(100) }).safeParse(data);
   if (!parsed.success) return [];
-  return (parsed.data[key] as unknown[]).map(normalizeOff).filter((f): f is ExternalFood => f !== null);
+  return (parsed.data[key] as unknown[])
+    .map((raw, i) => ({ raw, i, score: offScore(raw, options.country) }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map(({ raw }) => normalizeOff(raw))
+    .filter((f): f is ExternalFood => f !== null)
+    .slice(0, 15);
 }
 
 /**
  * Tries Open Food Facts' fast search service first and falls back to the
  * older (slower, more rate-limited) search endpoint if it fails or is empty.
  */
-export async function searchOpenFoodFacts(query: string, fetchImpl: Fetch = fetch): Promise<ExternalFood[]> {
+export async function searchOpenFoodFacts(query: string, fetchImpl: Fetch = fetch, options: SearchOptions = {}): Promise<ExternalFood[]> {
   const fast = new URL(OFF_SEARCH);
-  fast.search = new URLSearchParams({ q: query, page_size: "15", fields: OFF_FIELDS }).toString();
+  fast.search = new URLSearchParams({ q: query, page_size: "30", langs: "en", fields: OFF_FIELDS }).toString();
   try {
-    const results = productsFrom(await getJson(fast.toString(), fetchImpl), "hits");
+    const results = productsFrom(await getJson(fast.toString(), fetchImpl), "hits", options);
     if (results.length) return results;
   } catch {
     // fall through to the legacy endpoint
@@ -153,10 +173,10 @@ export async function searchOpenFoodFacts(query: string, fetchImpl: Fetch = fetc
     search_simple: "1",
     action: "process",
     json: "1",
-    page_size: "15",
+    page_size: "30",
     fields: OFF_FIELDS,
   }).toString();
-  return productsFrom(await getJson(legacy.toString(), fetchImpl), "products");
+  return productsFrom(await getJson(legacy.toString(), fetchImpl), "products", options);
 }
 
 export async function getOpenFoodFactsProduct(code: string, fetchImpl: Fetch = fetch): Promise<ExternalFood | null> {
@@ -250,8 +270,13 @@ export async function getUsdaFood(fdcId: string, apiKey: string | undefined, fet
  * Searches both sources at once and interleaves the results so neither
  * crowds the other out. A failing or slow source just contributes nothing.
  */
-export async function searchExternal(query: string, apiKey: string | undefined, fetchImpl: Fetch = fetch) {
-  const [off, usda] = await Promise.allSettled([searchOpenFoodFacts(query, fetchImpl), searchUsda(query, apiKey, fetchImpl)]);
+export async function searchExternal(
+  query: string,
+  apiKey: string | undefined,
+  fetchImpl: Fetch = fetch,
+  options: SearchOptions = {},
+) {
+  const [off, usda] = await Promise.allSettled([searchOpenFoodFacts(query, fetchImpl, options), searchUsda(query, apiKey, fetchImpl)]);
   const a = off.status === "fulfilled" ? off.value : [];
   const b = usda.status === "fulfilled" ? usda.value : [];
   const merged: ExternalFood[] = [];
@@ -266,4 +291,28 @@ export async function searchExternal(query: string, apiKey: string | undefined, 
     }
   }
   return merged;
+}
+
+/** Maps a time zone to the Open Food Facts country tag we rank first. */
+const COUNTRY_BY_TZ: Record<string, string> = {
+  "Asia/Kolkata": "en:india",
+  "Asia/Calcutta": "en:india",
+  "Asia/Dubai": "en:united-arab-emirates",
+  "Asia/Singapore": "en:singapore",
+  "Asia/Kuala_Lumpur": "en:malaysia",
+  "Asia/Karachi": "en:pakistan",
+  "Asia/Dhaka": "en:bangladesh",
+  "Asia/Colombo": "en:sri-lanka",
+  "Europe/London": "en:united-kingdom",
+  "America/New_York": "en:united-states",
+  "America/Chicago": "en:united-states",
+  "America/Denver": "en:united-states",
+  "America/Los_Angeles": "en:united-states",
+  "America/Toronto": "en:canada",
+  "Australia/Sydney": "en:australia",
+  "Australia/Melbourne": "en:australia",
+};
+
+export function countryForTimeZone(timeZone: string | null | undefined) {
+  return timeZone ? COUNTRY_BY_TZ[timeZone] : undefined;
 }

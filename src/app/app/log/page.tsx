@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { BarcodeScanner } from "@/components/app/barcode-scanner";
 import { AddExternalRow, AddFoodRow, QuickAddForm } from "@/components/app/log-forms";
 import { requireUser } from "@/lib/auth";
 import { getProfile, profileToday } from "@/lib/data/profile";
 import { formatDayLabel, isIsoDate } from "@/lib/dates";
 import { serverEnv } from "@/lib/env.server";
-import { searchExternal } from "@/lib/food/external";
+import { countryForTimeZone, searchExternal } from "@/lib/food/external";
 import { rateLimitUser } from "@/lib/security/rate-limit";
 import { MEALS, mealSchema, searchQuerySchema, type Meal } from "@/lib/validation/food";
 
@@ -91,6 +92,15 @@ export default async function LogPage({ searchParams }: PageProps<"/app/log">) {
     }
   }
 
+  // Favourites: shown on their own when there's no search, and as stars on every row.
+  const { data: favRows } = await supabase
+    .from("favorite_foods")
+    .select("food_id, foods (id, name, name_local, brand, calories, food_servings (id, label, grams))")
+    .order("created_at", { ascending: false })
+    .limit(30);
+  const favorites = ((favRows ?? []) as unknown as { foods: FoodRow | null }[]).flatMap((r) => (r.foods ? [toRow(r.foods)] : []));
+  const favoriteIds = new Set(favorites.map((f) => f.id));
+
   const customHref = `/app/foods/new?${new URLSearchParams({ meal, date, ...(query.success ? { name: query.data } : {}) })}`;
 
   return (
@@ -135,11 +145,28 @@ export default async function LogPage({ searchParams }: PageProps<"/app/log">) {
           Search
         </button>
       </form>
+      <div className="-mt-3 flex items-center gap-2 text-sm">
+        <BarcodeScanner meal={meal} date={date} />
+        <span>Scan a packet&apos;s barcode</span>
+      </div>
 
       {limited && (
         <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
           You&apos;re searching very quickly. Please wait a moment and try again.
         </p>
+      )}
+
+      {!query.success && favorites.length > 0 && (
+        <section aria-labelledby="favorites-heading" className={card}>
+          <h2 id="favorites-heading" className="font-semibold">
+            Favourites
+          </h2>
+          <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+            {favorites.map((f) => (
+              <AddFoodRow key={f.id} food={f} meal={meal} date={date} favorite />
+            ))}
+          </ul>
+        </section>
       )}
 
       <section aria-labelledby="results-heading" className={card}>
@@ -149,7 +176,7 @@ export default async function LogPage({ searchParams }: PageProps<"/app/log">) {
         {foods.length > 0 ? (
           <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
             {foods.map((f) => (
-              <AddFoodRow key={f.id} food={f} meal={meal} date={date} />
+              <AddFoodRow key={f.id} food={f} meal={meal} date={date} favorite={favoriteIds.has(f.id)} />
             ))}
           </ul>
         ) : (
@@ -165,7 +192,7 @@ export default async function LogPage({ searchParams }: PageProps<"/app/log">) {
             From Open Food Facts and USDA
           </h2>
           <Suspense fallback={<p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">Searching worldwide databases…</p>}>
-            <ExternalResults query={query.data} userId={user.id} meal={meal} date={date} />
+            <ExternalResults query={query.data} userId={user.id} meal={meal} date={date} country={countryForTimeZone(profile.timezone)} />
           </Suspense>
         </section>
       )}
@@ -188,11 +215,23 @@ export default async function LogPage({ searchParams }: PageProps<"/app/log">) {
   );
 }
 
-async function ExternalResults({ query, userId, meal, date }: { query: string; userId: string; meal: string; date: string }) {
+async function ExternalResults({
+  query,
+  userId,
+  meal,
+  date,
+  country,
+}: {
+  query: string;
+  userId: string;
+  meal: string;
+  date: string;
+  country?: string;
+}) {
   if (!(await rateLimitUser("externalFood", userId))) {
     return <p className="mt-2 text-sm">Too many searches right now. Please try again in a minute.</p>;
   }
-  const results = await searchExternal(query, serverEnv().usdaApiKey).catch(() => []);
+  const results = await searchExternal(query, serverEnv().usdaApiKey, fetch, { country }).catch(() => []);
   if (results.length === 0) {
     return (
       <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">

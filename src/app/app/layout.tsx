@@ -6,6 +6,7 @@ import { getNonce } from "@/lib/nonce";
 const NAV = [
   { href: "/app", label: "Today" },
   { href: "/app/log", label: "Add food" },
+  { href: "/app/recipes", label: "Recipes" },
   { href: "/app/targets", label: "Targets" },
 ] as const;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { logExternalFood, logFood, quickAdd } from "@/app/app/actions";
+import { logExternalFood, logFood, quickAdd, toggleFavorite } from "@/app/app/actions";
 import { errorsFor, Field, FormMessage, SubmitButton, useClientValidation } from "@/components/auth/form-parts";
 import { initialFormState, type FormState } from "@/lib/validation/auth";
 import { quickAddSchema } from "@/lib/validation/food";
@@ -38,14 +38,34 @@ function AddButton({ label }: { label: string }) {
 
 type Serving = { id: string; label: string; grams: number };
 
+function FavoriteButton({ foodId, name, favorite }: { foodId: string; name: string; favorite: boolean }) {
+  return (
+    <form action={toggleFavorite}>
+      <input type="hidden" name="foodId" value={foodId} />
+      <input type="hidden" name="favorite" value={favorite ? "0" : "1"} />
+      <button
+        aria-label={favorite ? `Remove ${name} from favourites` : `Add ${name} to favourites`}
+        aria-pressed={favorite}
+        className="flex size-9 items-center justify-center rounded-lg text-lg hover:bg-neutral-100 dark:hover:bg-neutral-900"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill={favorite ? "#d97706" : "none"} stroke={favorite ? "#d97706" : "currentColor"} strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z" />
+        </svg>
+      </button>
+    </form>
+  );
+}
+
 export function AddFoodRow({
   food,
   meal,
   date,
+  favorite = false,
 }: {
   food: { id: string; name: string; brand: string | null; name_local: string | null; calories: number; servings: Serving[] };
   meal: string;
   date: string;
+  favorite?: boolean;
 }) {
   const [state, action] = useActionState(logFood, initialFormState);
   const clientId = useClientId();
@@ -55,7 +75,9 @@ export function AddFoodRow({
 
   return (
     <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
+      <div className="flex min-w-0 items-start gap-1">
+        <FavoriteButton foodId={food.id} name={food.name} favorite={favorite} />
+        <div className="min-w-0">
         <p className="font-medium">
           {food.name}
           {food.name_local && <span className="ml-1 text-neutral-600 dark:text-neutral-400">· {food.name_local}</span>}
@@ -65,6 +87,7 @@ export function AddFoodRow({
           {Math.round(food.calories)} kcal per 100 g
           {serving ? ` · ${Math.round((food.calories * serving.grams) / 100)} kcal per ${serving.label}` : ""}
         </p>
+        </div>
       </div>
       <form action={action} className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="foodId" value={food.id} />
