@@ -13,6 +13,7 @@ export const LIMITS = {
   foodSearch: { limit: 60, windowSeconds: 60 },
   externalFood: { limit: 30, windowSeconds: 60 },
   logWrite: { limit: 120, windowSeconds: 60 },
+  offlineSync: { limit: 20, windowSeconds: 60 },
   recipeImport: { limit: 10, windowSeconds: 60 * 60 },
   photoUpload: { limit: 20, windowSeconds: 60 * 60 },
   dataExport: { limit: 20, windowSeconds: 60 * 60 },

@@ -19,6 +19,7 @@ const GROUPS = [
       ["Snap your meal", "AI lists the foods and portions in a photo and matches them to foods we know. You check every item before it's logged."],
       ["Quick add", "Just know the calories? Add them in two taps."],
       ["Recents, favourites and copy", "Re-log yesterday's breakfast or a whole day at once."],
+      ["Install it like an app", "Add Kalo to your home screen. No connection? Quick-add food and water anyway, and it syncs when you're back."],
     ],
   },
   {

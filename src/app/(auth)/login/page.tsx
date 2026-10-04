@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
+import { ClearOfflineData } from "@/components/pwa/clear-offline-data";
 import { getNonce, turnstileSiteKey } from "@/lib/nonce";
 import { safeRedirectPath } from "@/lib/security/redirect";
 
@@ -14,9 +15,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;
   const next = typeof params.next === "string" ? safeRedirectPath(params.next) : undefined;
   const linkError = params.error === "link";
+  const signedOut = params.signedout === "1";
 
   return (
     <>
+      {signedOut && <ClearOfflineData />}
       <h1 className="mb-1 font-display text-[1.75rem] font-bold tracking-tight">Log in</h1>
       <p className="mb-6 text-sm text-muted">
         New here?{" "}

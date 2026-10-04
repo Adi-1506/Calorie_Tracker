@@ -60,7 +60,7 @@ export const FAQS = [
   },
   {
     q: "Does it work offline?",
-    a: "Kalo needs a connection today. Offline logging that syncs when you're back online is on the way as part of the installable app.",
+    a: "Partly. Install Kalo on your phone and you can quick-add food and water with no connection; it's saved on your device and added to your log when you're back online. Searching foods, scanning barcodes and AI features need a connection.",
   },
   {
     q: "Which devices can I use?",

@@ -18,6 +18,11 @@ describe("buildCsp (items 18, 38, 41)", () => {
     expect(csp).toContain("upgrade-insecure-requests");
   });
 
+  it("allows only same-origin service workers and manifests (item 39)", () => {
+    expect(csp).toContain("worker-src 'self'");
+    expect(csp).toContain("manifest-src 'self'");
+  });
+
   it("allows the Supabase API for fetches", () => {
     expect(csp).toContain("connect-src 'self' https://example.supabase.co");
   });

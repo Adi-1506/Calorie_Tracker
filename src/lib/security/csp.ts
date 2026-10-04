@@ -16,6 +16,10 @@ export function buildCsp(nonce: string, { isDev = false, supabaseUrl = "", analy
     "font-src": ["'self'"],
     "connect-src": ["'self'", ...(supabaseUrl ? [supabaseUrl] : []), ...(analytics ? GA_CONNECT : [])],
     "frame-src": ["https://challenges.cloudflare.com", ...(map ? ["https://www.openstreetmap.org"] : [])],
+    // The service worker and manifest are same-origin files. worker-src must be
+    // explicit: otherwise it falls back to script-src, where 'strict-dynamic' ignores 'self'.
+    "worker-src": ["'self'"],
+    "manifest-src": ["'self'"],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
     "form-action": ["'self'"],

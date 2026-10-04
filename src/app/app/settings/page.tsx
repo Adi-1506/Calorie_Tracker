@@ -4,6 +4,7 @@ import { withdrawAiConsent } from "@/app/app/ai/actions";
 import { setHideNumbers } from "@/app/app/settings/actions";
 import Link from "next/link";
 import { DeleteAccountForm } from "@/components/app/delete-account-form";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { EnrollTotp } from "@/components/auth/mfa-forms";
 import { getProfile } from "@/lib/data/profile";
 import { requireUser } from "@/lib/auth";
@@ -24,6 +25,16 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         <h1 className="font-display text-[1.75rem] font-bold tracking-tight">Settings</h1>
         <p className="text-sm text-muted">Signed in as {user.email}</p>
       </div>
+
+      <section aria-labelledby="install-heading" className="card flex flex-col gap-3 p-5 sm:p-6">
+        <h2 id="install-heading" className="font-display text-xl font-bold">
+          Install the app
+        </h2>
+        <p className="text-sm">
+          Add Kalo to your home screen for one-tap logging. It opens like an app, and you can quick-add food and water without a connection.
+        </p>
+        <InstallPrompt />
+      </section>
 
       <section aria-labelledby="mfa-heading" className="card flex flex-col gap-4 p-5 sm:p-6">
         <h2 id="mfa-heading" className="font-display text-xl font-bold">

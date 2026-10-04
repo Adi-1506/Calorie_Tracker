@@ -2,6 +2,7 @@ import Link from "next/link";
 import { logout } from "@/app/(auth)/actions";
 import { MotionProvider } from "@/components/app/motion-provider";
 import { NavLinks } from "@/components/app/nav-links";
+import { OfflineSync } from "@/components/pwa/offline-sync";
 import { getNonce } from "@/lib/nonce";
 
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
@@ -26,7 +27,10 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
           </form>
         </nav>
       </header>
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-6 pb-12 sm:px-6">{children}</main>
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-6 pb-12 sm:px-6">
+        <OfflineSync />
+        {children}
+      </main>
     </MotionProvider>
   );
 }
