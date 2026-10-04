@@ -100,7 +100,7 @@ insert into public.reviews (rating, body) values (5, 'Logging Kerala food is fin
 
 select tests.eq(tests.rows('select * from public.meal_entries'), 1, 'A sees own meal entry');
 select tests.eq(tests.rows('select * from public.profiles'), 1, 'A sees only own profile');
-select tests.eq(tests.rows('select * from public.foods'), 2, 'A sees catalogue + own custom food');
+select tests.eq(tests.rows('select * from public.foods where external_id is null'), 2, 'A sees catalogue + own custom food');
 
 -- Mass assignment (item 8): server-managed columns are not writable.
 select tests.throws($$update public.profiles set role = 'admin'$$, '42501');
@@ -137,7 +137,7 @@ select tests.throws($$insert into public.contact_messages (name, email, message)
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000b","role":"authenticated"}', false);
 
 select tests.eq(tests.rows('select * from public.meal_entries'), 0, 'B cannot read A''s meals');
-select tests.eq(tests.rows('select * from public.foods'), 1, 'B sees catalogue only, not A''s custom food');
+select tests.eq(tests.rows('select * from public.foods where external_id is null'), 1, 'B sees catalogue only, not A''s custom food');
 select tests.eq(tests.rows('select * from public.reviews'), 0, 'B cannot see A''s pending review');
 select tests.eq(
   tests.affected($$update public.meal_entries set calories = 0 where id = '20000000-0000-0000-0000-000000000001'$$),
@@ -169,7 +169,7 @@ reset role;
 select set_config('request.jwt.claims', '', false);
 set role anon;
 
-select tests.eq(tests.rows('select * from public.foods'), 1, 'anon sees catalogue foods');
+select tests.eq(tests.rows('select * from public.foods where external_id is null'), 1, 'anon sees catalogue foods');
 select tests.eq(tests.rows('select * from public.badges'), 1, 'anon sees badge catalogue');
 select tests.eq(tests.rows('select * from public.reviews'), 0, 'anon sees no unpublished reviews');
 select tests.throws($$select * from public.meal_entries$$, '42501');
@@ -221,6 +221,34 @@ select tests.eq((select count(*) from generate_series(1, 3) where public.check_r
   'first 3 hits are allowed');
 select tests.eq(public.check_rate_limit('login:test', 3, 3600)::int, 0, '4th hit is blocked');
 select tests.eq(public.check_rate_limit('login:other', 3, 3600)::int, 1, 'other keys are independent');
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- Food search (step 3a): catalogue + own foods only, wildcards escaped
+-- ---------------------------------------------------------------------------
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-00000000000c', 'c@example.test'),
+  ('00000000-0000-0000-0000-00000000000d', 'd@example.test');
+
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c","role":"authenticated"}', false);
+insert into public.foods (name, calories) values ('C''s secret dosa batter', 150);
+select tests.eq(tests.rows($$select * from public.search_foods('dosa')$$), 3, 'C finds catalogue dosas plus own food');
+select tests.eq(tests.rows($$select * from public.search_foods('dosa') where owner_id is not null limit 1$$), 1,
+  'own foods rank first');
+select tests.eq(tests.rows($$select * from public.search_foods('_')$$), 0, 'a bare _ is a literal, not a wildcard');
+select tests.eq(tests.rows($$select * from public.search_foods('(1%)')$$), 1, 'a % matches only a literal %');
+select tests.eq(tests.rows($$select * from public.search_foods('')$$), 0, 'empty query returns nothing');
+select tests.eq(tests.rows($$select * from public.search_foods('a', 500)$$), 50, 'results are capped at 50');
+select tests.eq(tests.rows($$select * from public.search_foods('അപ്പം')$$), 1, 'local-language names are searchable');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000d","role":"authenticated"}', false);
+select tests.eq(tests.rows($$select * from public.search_foods('secret dosa')$$), 0, 'D cannot find C''s custom food');
+select tests.eq(tests.affected($$update public.profiles set timezone = 'Asia/Kolkata'$$), 1, 'timezone is user-editable');
+reset role;
+
+set role anon;
+select tests.throws($$select * from public.search_foods('dosa')$$, '42501');
 reset role;
 
 \echo 'All RLS tests passed.'
