@@ -40,8 +40,6 @@ const toRow = (f: FoodRow) => ({
   servings: (f.food_servings ?? []).map((s) => ({ ...s, grams: Number(s.grams) })),
 });
 
-const linkClass = "underline underline-offset-4";
-const card = "rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800";
 
 export default async function LogPage({ searchParams }: PageProps<"/app/log">) {
   const { user, supabase } = await requireUser();
@@ -103,65 +101,69 @@ export default async function LogPage({ searchParams }: PageProps<"/app/log">) {
 
   const customHref = `/app/foods/new?${new URLSearchParams({ meal, date, ...(query.success ? { name: query.data } : {}) })}`;
 
+  const mealLabel = MEALS.find((m) => m.value === meal)?.label ?? "";
+
   return (
     <>
-      <div>
-        <h1 className="text-2xl font-semibold">Add food</h1>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          {formatDayLabel(date, today)} ·{" "}
-          {MEALS.map((m, i) => (
-            <span key={m.value}>
-              {i > 0 && " · "}
-              {m.value === meal ? (
-                <strong aria-current="true">{m.label}</strong>
-              ) : (
-                <Link href={`/app/log?${new URLSearchParams({ meal: m.value, date, q: rawQuery })}`} className={linkClass}>
-                  {m.label}
-                </Link>
-              )}
-            </span>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <Link href={date === today ? "/app" : `/app?date=${date}`} className="btn btn-icon btn-round" aria-label="Back to the day">
+            ←
+          </Link>
+          <div>
+            <h1 className="font-display text-[1.75rem] font-extrabold leading-tight tracking-tight">Add to {mealLabel.toLowerCase()}</h1>
+            <p className="text-sm text-muted">{formatDayLabel(date, today)}</p>
+          </div>
+        </div>
+        <nav aria-label="Meal" className="flex flex-wrap gap-1.5">
+          {MEALS.map((m) => (
+            <Link
+              key={m.value}
+              href={`/app/log?${new URLSearchParams({ meal: m.value, date, q: rawQuery })}`}
+              aria-current={m.value === meal ? "true" : undefined}
+              className="flex min-h-10 items-center rounded-full border-2 border-ink px-3.5 text-sm font-medium aria-[current=true]:bg-ink aria-[current=true]:font-semibold aria-[current=true]:text-ground"
+            >
+              {m.label}
+            </Link>
           ))}
-        </p>
+        </nav>
       </div>
 
-      <form role="search" action="/app/log" className="flex gap-2">
-        <input type="hidden" name="meal" value={meal} />
-        <input type="hidden" name="date" value={date} />
-        <label htmlFor="q" className="sr-only">
-          Search foods
-        </label>
-        <input
-          id="q"
-          name="q"
-          type="search"
-          defaultValue={rawQuery}
-          minLength={2}
-          maxLength={100}
-          placeholder="Search any food, dish or brand"
-          autoComplete="off"
-          className="min-w-0 flex-1 rounded-lg border border-neutral-300 bg-transparent px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:border-neutral-700"
-        />
-        <button className="rounded-lg bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700">
-          Search
-        </button>
-      </form>
-      <div className="-mt-3 flex items-center gap-2 text-sm">
+      <div className="flex gap-2">
+        <form role="search" action="/app/log" className="flex min-w-0 flex-1 gap-2">
+          <input type="hidden" name="meal" value={meal} />
+          <input type="hidden" name="date" value={date} />
+          <label htmlFor="q" className="sr-only">
+            Search foods
+          </label>
+          <input
+            id="q"
+            name="q"
+            type="search"
+            defaultValue={rawQuery}
+            minLength={2}
+            maxLength={100}
+            placeholder="Search any food, dish or brand"
+            autoComplete="off"
+            className="input min-h-[3.25rem] min-w-0 flex-1 text-[1.0625rem]"
+          />
+          <button className="btn btn-ink min-h-[3.25rem]">Search</button>
+        </form>
         <BarcodeScanner meal={meal} date={date} />
-        <span>Scan a packet&apos;s barcode</span>
       </div>
 
       {limited && (
-        <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+        <p role="alert" className="notice notice-warn">
           You&apos;re searching very quickly. Please wait a moment and try again.
         </p>
       )}
 
       {!query.success && favorites.length > 0 && (
-        <section aria-labelledby="favorites-heading" className={card}>
-          <h2 id="favorites-heading" className="font-semibold">
+        <section aria-labelledby="favorites-heading" className="flex flex-col gap-2.5">
+          <h2 id="favorites-heading" className="eyebrow">
             Favourites
           </h2>
-          <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+          <ul className="card rows px-4">
             {favorites.map((f) => (
               <AddFoodRow key={f.id} food={f} meal={meal} date={date} favorite />
             ))}
@@ -169,46 +171,43 @@ export default async function LogPage({ searchParams }: PageProps<"/app/log">) {
         </section>
       )}
 
-      <section aria-labelledby="results-heading" className={card}>
-        <h2 id="results-heading" className="font-semibold">
-          {heading}
+      <section aria-labelledby="results-heading" className="flex flex-col gap-2.5">
+        <h2 id="results-heading" className="eyebrow">
+          {query.success ? "In your kitchen" : heading}
         </h2>
         {foods.length > 0 ? (
-          <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+          <ul className="card rows px-4">
             {foods.map((f) => (
               <AddFoodRow key={f.id} food={f} meal={meal} date={date} favorite={favoriteIds.has(f.id)} />
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="card-flat p-4 text-sm text-muted">
             {query.success ? "Nothing in your foods or our catalogue yet." : "Foods you log will show up here for quick re-adding."}
           </p>
         )}
       </section>
 
       {query.success && !limited && (
-        <section aria-labelledby="external-heading" className={card}>
-          <h2 id="external-heading" className="font-semibold">
-            From Open Food Facts and USDA
+        <section aria-labelledby="external-heading" className="flex flex-col gap-2.5">
+          <h2 id="external-heading" className="eyebrow">
+            From the world&apos;s shelves
           </h2>
-          <Suspense fallback={<p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">Searching worldwide databases…</p>}>
+          <Suspense fallback={<p className="card-flat p-4 text-sm text-muted">Searching Open Food Facts and USDA…</p>}>
             <ExternalResults query={query.data} userId={user.id} meal={meal} date={date} country={countryForTimeZone(profile.timezone)} />
           </Suspense>
         </section>
       )}
 
-      <p className="text-sm">
-        Can&apos;t find it?{" "}
-        <Link href={customHref} className={linkClass}>
-          Create a custom food
-        </Link>{" "}
-        or use quick add below.
-      </p>
-
-      <section aria-labelledby="quick-heading" className={card}>
-        <h2 id="quick-heading" className="mb-3 font-semibold">
-          Quick add calories
-        </h2>
+      <section aria-labelledby="quick-heading" className="flex flex-col gap-4 rounded-[20px] border-2 border-dashed border-ink p-4 sm:p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="quick-heading" className="font-display text-lg font-bold">
+            Not here?
+          </h2>
+          <Link href={customHref} className="link text-sm font-semibold">
+            Create a custom food
+          </Link>
+        </div>
         <QuickAddForm meal={meal} date={date} />
       </section>
     </>
@@ -229,18 +228,18 @@ async function ExternalResults({
   country?: string;
 }) {
   if (!(await rateLimitUser("externalFood", userId))) {
-    return <p className="mt-2 text-sm">Too many searches right now. Please try again in a minute.</p>;
+    return <p className="card-flat p-4 text-sm">Too many searches right now. Please try again in a minute.</p>;
   }
   const results = await searchExternal(query, serverEnv().usdaApiKey, fetch, { country }).catch(() => []);
   if (results.length === 0) {
     return (
-      <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="card-flat p-4 text-sm text-muted">
         No matches, or the databases didn&apos;t answer in time.
       </p>
     );
   }
   return (
-    <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+    <ul className="card rows px-4">
       {results.map((f) => (
         <AddExternalRow
           key={`${f.source}-${f.externalId}`}

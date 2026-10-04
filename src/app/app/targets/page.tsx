@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { TargetsForm } from "@/components/app/targets-form";
 import { requireUser } from "@/lib/auth";
 import { getLatestWeightKg, getProfile, getTargets, profileAge, profileToday } from "@/lib/data/profile";
-import { CALORIE_FLOOR, suggestTargets } from "@/lib/nutrition/targets";
+import { bmr, CALORIE_FLOOR, suggestTargets, tdee } from "@/lib/nutrition/targets";
 
 export const metadata: Metadata = { title: "Your targets | Calorie Tracker", robots: { index: false } };
 
@@ -17,17 +17,12 @@ export default async function TargetsPage({ searchParams }: PageProps<"/app/targ
   const today = profileToday(profile);
   const [targets, weightKg] = await Promise.all([getTargets(supabase, today), getLatestWeightKg(supabase, user.id)]);
   const age = profileAge(profile);
-  const suggested =
+  const input =
     weightKg && age && profile.sex && profile.height_cm && profile.activity_level && profile.goal
-      ? suggestTargets({
-          sex: profile.sex,
-          weightKg,
-          heightCm: Number(profile.height_cm),
-          age,
-          activity: profile.activity_level,
-          goal: profile.goal,
-        })
+      ? { sex: profile.sex, weightKg, heightCm: Number(profile.height_cm), age, activity: profile.activity_level, goal: profile.goal }
       : null;
+  const suggested = input ? suggestTargets(input) : null;
+  const maintenance = input ? Math.round(tdee(bmr(input), input.activity)) : null;
 
   const current = {
     calories: targets?.calories ?? suggested?.calories ?? 2000,
@@ -37,24 +32,69 @@ export default async function TargetsPage({ searchParams }: PageProps<"/app/targ
     waterMl: targets?.water_ml ?? suggested?.waterMl ?? 2000,
   };
 
+  const diff = maintenance != null ? current.calories - maintenance : null;
+  const explain =
+    diff == null || maintenance == null
+      ? "Your daily calorie target."
+      : Math.abs(diff) < 50
+        ? `About the same as your maintenance of ${maintenance.toLocaleString("en")} kcal.`
+        : `About ${Math.abs(diff).toLocaleString("en")} kcal ${diff < 0 ? "below" : "above"} your maintenance of ${maintenance.toLocaleString("en")} kcal.`;
+  const macros = [
+    { label: "Protein", value: current.proteinG, color: "var(--leaf)" },
+    { label: "Carbs", value: current.carbsG, color: "var(--carb)" },
+    { label: "Fat", value: current.fatG, color: "var(--chili)" },
+  ];
+
   return (
-    <div className="mx-auto w-full max-w-xl">
-      <h1 className="mb-1 text-2xl font-semibold">{welcome ? "Here are your daily targets" : "Your daily targets"}</h1>
-      <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-400">
-        {welcome
-          ? "We worked these out from your details. Keep them, or adjust anything to suit you."
-          : "Change any number. New targets apply from today; past days keep the targets they had."}
-      </p>
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+      <section aria-labelledby="targets-heading" className="flex flex-col gap-5 rounded-[26px] bg-night p-5 text-on-night sm:p-7">
+        <div>
+          <h1 id="targets-heading" className="font-display text-[2rem] font-extrabold leading-[1.05] tracking-tight sm:text-[2.5rem]">
+            {welcome ? "Here\u2019s what a good day looks like for you." : "Your daily plate"}
+          </h1>
+          <p className="mt-2 text-sm text-night-muted">
+            {welcome
+              ? "We worked these out from your details. Keep them, or adjust anything below."
+              : "New targets apply from today; past days keep the targets they had."}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1 rounded-[22px] bg-turmeric p-5 text-on-turmeric shadow-[6px_6px_0_var(--on-night)]">
+          <span className="text-sm font-semibold">Calories per day</span>
+          <span className="font-mono text-[3.5rem] font-semibold leading-none tabular-nums">{current.calories.toLocaleString("en")}</span>
+          <span className="text-sm">{explain}</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2.5">
+          {macros.map((m) => (
+            <div key={m.label} className="flex flex-col gap-1 rounded-[18px] border-2 border-on-night px-3 py-3.5">
+              <span className="size-3.5 rounded-full" style={{ background: m.color }} aria-hidden="true" />
+              <span className="text-[13px] text-night-muted">{m.label}</span>
+              <span className="font-mono text-xl font-semibold tabular-nums">{m.value} g</span>
+            </div>
+          ))}
+        </div>
+        <p className="flex items-center gap-2.5 text-sm">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--water)" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path d="M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z" />
+          </svg>
+          <span>
+            <span className="font-mono font-semibold">{current.waterMl.toLocaleString("en")} ml</span> water, about {Math.round(current.waterMl / 250)} glasses
+          </span>
+        </p>
+      </section>
+
       {suggested && targets?.source === "manual" && (
-        <p className="mb-4 rounded-lg bg-neutral-100 px-3 py-2 text-sm dark:bg-neutral-900">
+        <p className="notice notice-warn">
           Suggested for you: {suggested.calories} kcal, {suggested.proteinG} g protein, {suggested.carbsG} g carbs, {suggested.fatG} g fat.
         </p>
       )}
-      <div className="rounded-2xl border border-neutral-200 p-6 shadow-sm dark:border-neutral-800">
+      <section aria-labelledby="adjust-heading" className="card p-5 sm:p-7">
+        <h2 id="adjust-heading" className="mb-4 font-display text-xl font-bold">
+          Adjust
+        </h2>
         <TargetsForm current={current} floor={CALORIE_FLOOR[profile.sex ?? "female"]} />
-      </div>
-      <p className="mt-4 text-sm">
-        <Link href="/app/onboarding" className="underline underline-offset-4">
+      </section>
+      <p className="text-sm">
+        <Link href="/app/onboarding" className="link">
           Update your details
         </Link>{" "}
         to recalculate.

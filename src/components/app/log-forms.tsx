@@ -7,7 +7,7 @@ import { initialFormState, type FormState } from "@/lib/validation/auth";
 import { quickAddSchema } from "@/lib/validation/food";
 
 const inputClass =
-  "w-24 rounded-lg border border-neutral-300 bg-transparent px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:border-neutral-700 dark:bg-neutral-950";
+  "input w-20 shrink-0 text-sm";
 
 /** Idempotency key so a double-tap or a retried request logs the food once. */
 function useClientId() {
@@ -19,7 +19,7 @@ function InlineError({ state }: { state: FormState }) {
   if (state.status !== "error") return null;
   const message = state.message ?? Object.values(state.fieldErrors ?? {})[0]?.[0];
   return message ? (
-    <p role="alert" className="w-full text-sm text-red-700 dark:text-red-400">
+    <p role="alert" className="w-full text-sm text-danger">
       {message}
     </p>
   ) : null;
@@ -29,7 +29,7 @@ function AddButton({ label }: { label: string }) {
   return (
     <button
       type="submit"
-      className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+      className="btn btn-primary"
     >
       Add<span className="sr-only"> {label}</span>
     </button>
@@ -46,9 +46,9 @@ function FavoriteButton({ foodId, name, favorite }: { foodId: string; name: stri
       <button
         aria-label={favorite ? `Remove ${name} from favourites` : `Add ${name} to favourites`}
         aria-pressed={favorite}
-        className="flex size-9 items-center justify-center rounded-lg text-lg hover:bg-neutral-100 dark:hover:bg-neutral-900"
+        className="flex size-10 items-center justify-center rounded-lg text-lg hover:bg-well"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill={favorite ? "#d97706" : "none"} stroke={favorite ? "#d97706" : "currentColor"} strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill={favorite ? "var(--turmeric)" : "none"} stroke={favorite ? "var(--ink)" : "currentColor"} strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
           <path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z" />
         </svg>
       </button>
@@ -78,18 +78,18 @@ export function AddFoodRow({
       <div className="flex min-w-0 items-start gap-1">
         <FavoriteButton foodId={food.id} name={food.name} favorite={favorite} />
         <div className="min-w-0">
-        <p className="font-medium">
+        <p className="font-semibold">
           {food.name}
-          {food.name_local && <span className="ml-1 text-neutral-600 dark:text-neutral-400">· {food.name_local}</span>}
+          {food.name_local && <span className="ml-1 text-muted">· {food.name_local}</span>}
         </p>
-        <p className="text-xs text-neutral-600 dark:text-neutral-400">
+        <p className="text-xs text-muted">
           {food.brand ? `${food.brand} · ` : ""}
           {Math.round(food.calories)} kcal per 100 g
           {serving ? ` · ${Math.round((food.calories * serving.grams) / 100)} kcal per ${serving.label}` : ""}
         </p>
         </div>
       </div>
-      <form action={action} className="flex flex-wrap items-center gap-2">
+      <form action={action} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
         <input type="hidden" name="foodId" value={food.id} />
         <input type="hidden" name="meal" value={meal} />
         <input type="hidden" name="date" value={date} />
@@ -117,7 +117,7 @@ export function AddFoodRow({
           name="servingId"
           value={servingId}
           onChange={(e) => setServingId(e.target.value)}
-          className={`${inputClass} w-auto max-w-48`}
+          className={`${inputClass} w-auto min-w-0 max-w-48 flex-1 sm:flex-none`}
         >
           {food.servings.map((s) => (
             <option key={s.id} value={s.id}>
@@ -148,10 +148,10 @@ export function AddExternalRow({
   return (
     <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <p className="font-medium">{food.name}</p>
-        <p className="text-xs text-neutral-600 dark:text-neutral-400">
+        <p className="font-semibold">{food.name}</p>
+        <p className="text-xs text-muted">
           {food.brand ? `${food.brand} · ` : ""}
-          {Math.round(food.calories)} kcal per 100 g · {food.source === "usda" ? "USDA" : "Open Food Facts"}
+          {Math.round(food.calories)} kcal / 100 g · <span className="badge">{food.source === "usda" ? "USDA" : "Open Food Facts"}</span>
           {food.serving ? ` · serving ${food.serving.label}` : ""}
         </p>
       </div>

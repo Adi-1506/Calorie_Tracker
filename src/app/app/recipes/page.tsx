@@ -12,28 +12,28 @@ export default async function RecipesPage() {
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Your recipes</h1>
-        <Link href="/app/recipes/new" className="rounded-lg bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800">
+        <h1 className="font-display text-[1.75rem] font-bold tracking-tight">Your recipes</h1>
+        <Link href="/app/recipes/new" className="btn btn-primary">
           New recipe
         </Link>
       </div>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="text-sm text-muted">
         Build a dish from its ingredients once, then log a serving in one tap. Works for any cuisine.
       </p>
-      <section className="rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
+      <section className="card p-4 sm:p-5">
         <ImportRecipeForm />
       </section>
       {recipes.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-neutral-300 p-6 text-center text-sm dark:border-neutral-700">
+        <p className="rounded-[20px] border-2 border-dashed border-ink p-6 text-center text-sm">
           No recipes yet. Try your usual sambar, a smoothie, or a family pasta bake.
         </p>
       ) : (
-        <ul className="divide-y divide-neutral-200 rounded-2xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+        <ul className="card rows overflow-hidden">
           {recipes.map((r) => (
             <li key={r.id}>
-              <Link href={`/app/recipes/${r.id}`} className="flex justify-between gap-3 px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-900">
+              <Link href={`/app/recipes/${r.id}`} className="flex justify-between gap-3 px-4 py-3.5 hover:bg-well">
                 <span className="font-medium">{r.name}</span>
-                <span className="text-sm text-neutral-600 dark:text-neutral-400">
+                <span className="text-sm text-muted">
                   {Number(r.servings)} {Number(r.servings) === 1 ? "serving" : "servings"}
                 </span>
               </Link>

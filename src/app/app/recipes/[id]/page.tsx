@@ -44,16 +44,16 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/a
   return (
     <>
       <div>
-        <Link href="/app/recipes" className="text-sm underline underline-offset-4">
+        <Link href="/app/recipes" className="text-sm link">
           ← All recipes
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold">{recipe.name}</h1>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
+        <h1 className="mt-2 font-display text-[1.75rem] font-bold tracking-tight">{recipe.name}</h1>
+        <p className="text-sm text-muted">
           Makes {recipe.servings} {recipe.servings === 1 ? "serving" : "servings"}
           {recipe.source_url && (
             <>
               {" · "}
-              <a href={recipe.source_url} rel="noopener noreferrer nofollow" target="_blank" className="underline underline-offset-4">
+              <a href={recipe.source_url} rel="noopener noreferrer nofollow" target="_blank" className="link">
                 original recipe
               </a>
             </>
@@ -61,8 +61,8 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/a
         </p>
       </div>
 
-      <section aria-labelledby="per-serving" className="grid grid-cols-2 gap-3 rounded-2xl border border-neutral-200 p-4 sm:grid-cols-4 dark:border-neutral-800">
-        <h2 id="per-serving" className="col-span-full text-sm font-semibold">
+      <section aria-labelledby="per-serving" className="card grid grid-cols-2 gap-3 p-4 sm:grid-cols-4 sm:p-5">
+        <h2 id="per-serving" className="eyebrow col-span-full">
           Per serving
         </h2>
         {[
@@ -72,20 +72,20 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/a
           ["Fat", `${ps.fat_g.toFixed(1)} g`],
         ].map(([label, value]) => (
           <div key={label}>
-            <div className="text-xs text-neutral-600 dark:text-neutral-400">{label}</div>
-            <div className="text-lg font-semibold tabular-nums">{value}</div>
+            <div className="text-xs text-muted">{label}</div>
+            <div className="font-mono text-xl font-semibold tabular-nums">{value}</div>
           </div>
         ))}
       </section>
 
       {recipe.site_calories_per_serving && (
-        <p className="-mt-3 text-xs text-neutral-600 dark:text-neutral-400">
+        <p className="-mt-3 text-xs text-muted">
           The original site says about {recipe.site_calories_per_serving} kcal per serving. Our number comes from the ingredients you add.
         </p>
       )}
 
       {recipe.imported_ingredients.length > 0 && (
-        <section aria-labelledby="todo-heading" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+        <section aria-labelledby="todo-heading" className="card-flat notice-warn p-4">
           <h2 id="todo-heading" className="font-semibold">
             From the original recipe: match these to foods
           </h2>
@@ -93,13 +93,13 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/a
             {recipe.imported_ingredients.map((line, index) => (
               <li key={`${index}-${line}`} className="flex items-center justify-between gap-3">
                 <span className="min-w-0 flex-1">{line}</span>
-                <a href={`/app/recipes/${recipe.id}?${new URLSearchParams({ q: ingredientSearchTerm(line) || line.slice(0, 60) })}#q`} className="underline underline-offset-4">
+                <a href={`/app/recipes/${recipe.id}?${new URLSearchParams({ q: ingredientSearchTerm(line) || line.slice(0, 60) })}#q`} className="link">
                   Find
                 </a>
                 <form action={dismissImportedLine}>
                   <input type="hidden" name="recipeId" value={recipe.id} />
                   <input type="hidden" name="index" value={index} />
-                  <button className="rounded px-2 py-1 hover:bg-amber-100 dark:hover:bg-amber-900" aria-label={`Mark ${line} as done`}>
+                  <button className="btn btn-sm" aria-label={`Mark ${line} as done`}>
                     Done
                   </button>
                 </form>
@@ -109,33 +109,33 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/a
         </section>
       )}
 
-      <section aria-labelledby="log-heading" className="rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
+      <section aria-labelledby="log-heading" className="card p-4 sm:p-5">
         <h2 id="log-heading" className="mb-3 font-semibold">
           Log this recipe today
         </h2>
         <LogRecipeForm recipeId={recipe.id} date={today} defaultMeal="lunch" />
       </section>
 
-      <section aria-labelledby="ing-heading" className="rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
+      <section aria-labelledby="ing-heading" className="card p-4 sm:p-5">
         <h2 id="ing-heading" className="font-semibold">
           Ingredients ({Math.round(recipe.total.calories)} kcal in total)
         </h2>
         {recipe.ingredients.length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">Search below to add the first ingredient.</p>
+          <p className="mt-2 text-sm text-muted">Search below to add the first ingredient.</p>
         ) : (
-          <ul className="mt-2 divide-y divide-neutral-200 dark:divide-neutral-800">
+          <ul className="mt-2 rows">
             {recipe.ingredients.map((i) => (
               <li key={i.id} className="flex items-center justify-between gap-3 py-2 text-sm">
                 <span className="min-w-0 flex-1 truncate">
                   {i.food.name} · {i.grams} g
                 </span>
-                <span className="tabular-nums text-neutral-600 dark:text-neutral-400">
+                <span className="tabular-nums text-muted">
                   {Math.round((Number(i.food.calories) * i.grams) / 100)} kcal
                 </span>
                 <form action={removeIngredient}>
                   <input type="hidden" name="recipeId" value={recipe.id} />
                   <input type="hidden" name="ingredientId" value={i.id} />
-                  <button aria-label={`Remove ${i.food.name}`} className="rounded px-2 py-1 text-neutral-500 hover:text-red-700">
+                  <button aria-label={`Remove ${i.food.name}`} className="rounded px-2 py-1 text-muted hover:text-danger">
                     ✕
                   </button>
                 </form>
@@ -154,25 +154,25 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/a
             type="search"
             defaultValue={query.success ? query.data : ""}
             placeholder="Add an ingredient: rice, toor dal, olive oil…"
-            className="min-w-0 flex-1 rounded-lg border border-neutral-300 bg-transparent px-3 py-2 dark:border-neutral-700"
+            className="input min-w-0 flex-1"
           />
-          <button className="rounded-lg border border-neutral-300 px-4 py-2 dark:border-neutral-700">Search</button>
+          <button className="btn btn-ink">Search</button>
         </form>
         {results.length > 0 && (
-          <ul className="mt-2 divide-y divide-neutral-200 dark:divide-neutral-800">
+          <ul className="mt-2 rows">
             {results.map((f) => (
               <AddIngredientRow key={f.id} recipeId={recipe.id} food={f} />
             ))}
           </ul>
         )}
-        <p className="mt-3 text-xs text-neutral-600 dark:text-neutral-400">
-          Missing something? <Link href="/app/foods/new" className="underline underline-offset-4">Create a custom food</Link>, then add it here.
+        <p className="mt-3 text-xs text-muted">
+          Missing something? <Link href="/app/foods/new" className="link">Create a custom food</Link>, then add it here.
         </p>
       </section>
 
       <form action={deleteRecipe}>
         <input type="hidden" name="recipeId" value={recipe.id} />
-        <button className="text-sm text-red-700 underline underline-offset-4 dark:text-red-400">Delete recipe</button>
+        <button className="link text-sm text-danger">Delete recipe</button>
       </form>
     </>
   );

@@ -18,9 +18,9 @@ export default async function ResetPasswordPage() {
   if (!user) {
     return (
       <div className="flex flex-col gap-3">
-        <h1 className="text-2xl font-semibold">Link expired</h1>
+        <h1 className="font-display text-[1.75rem] font-bold tracking-tight">Link expired</h1>
         <p>This reset link is invalid or has expired.</p>
-        <Link href="/forgot-password" className="underline underline-offset-4">
+        <Link href="/forgot-password" className="link">
           Request a new link
         </Link>
       </div>
@@ -29,7 +29,7 @@ export default async function ResetPasswordPage() {
 
   return (
     <>
-      <h1 className="mb-6 text-2xl font-semibold">Choose a new password</h1>
+      <h1 className="mb-6 font-display text-[1.75rem] font-bold tracking-tight">Choose a new password</h1>
       <ResetPasswordForm />
     </>
   );

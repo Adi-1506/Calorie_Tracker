@@ -12,11 +12,11 @@ export default async function OnboardingPage() {
 
   return (
     <div className="mx-auto w-full max-w-xl">
-      <h1 className="mb-1 text-2xl font-semibold">{returning ? "Your details" : "Let's set your daily targets"}</h1>
-      <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-400">
+      <h1 className="mb-1 font-display text-[1.75rem] font-bold tracking-tight">{returning ? "Your details" : "Let's set your daily targets"}</h1>
+      <p className="mb-6 text-sm text-muted">
         We use the Mifflin-St Jeor formula to estimate how much energy you burn. You can change every number afterwards.
       </p>
-      <div className="rounded-2xl border border-neutral-200 p-6 shadow-sm dark:border-neutral-800">
+      <div className="card p-5 sm:p-7">
         <OnboardingForm
           defaults={{
             displayName: profile?.display_name ?? undefined,

@@ -65,7 +65,7 @@ export function Field({
     .join(" ");
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={name} className="text-sm font-medium">
+      <label htmlFor={name} className="text-sm font-semibold">
         {label}
       </label>
       <input
@@ -81,15 +81,15 @@ export function Field({
         max={max}
         aria-invalid={errors?.length ? true : undefined}
         aria-describedby={describedBy || undefined}
-        className="rounded-lg border border-neutral-300 bg-transparent px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 aria-[invalid=true]:border-red-600 dark:border-neutral-700"
+        className="input"
       />
       {hint && (
-        <p id={`${name}-hint`} className="text-xs text-neutral-600 dark:text-neutral-400">
+        <p id={`${name}-hint`} className="text-xs text-muted">
           {hint}
         </p>
       )}
       {errors?.length ? (
-        <p id={`${name}-error`} role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p id={`${name}-error`} role="alert" className="text-sm font-medium text-danger">
           {errors[0]}
         </p>
       ) : null}
@@ -107,12 +107,12 @@ export function Checkbox({ name, children, errors }: { name: string; children: R
           required
           aria-invalid={errors?.length ? true : undefined}
           aria-describedby={errors?.length ? `${name}-error` : undefined}
-          className="mt-0.5 size-4 accent-emerald-700"
+          className="mt-0.5 size-4 accent-turmeric"
         />
         <span>{children}</span>
       </label>
       {errors?.length ? (
-        <p id={`${name}-error`} role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p id={`${name}-error`} role="alert" className="text-sm font-medium text-danger">
           {errors[0]}
         </p>
       ) : null}
@@ -135,14 +135,14 @@ export function Honeypot() {
 export function FormMessage({ state }: { state: FormState }) {
   if (state.status === "error" && state.message) {
     return (
-      <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">
+      <p role="alert" className="notice notice-error">
         {state.message}
       </p>
     );
   }
   if (state.status === "success") {
     return (
-      <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+      <p role="status" className="notice notice-ok">
         {state.message}
       </p>
     );
@@ -157,7 +157,7 @@ export function SubmitButton({ children }: { children: React.ReactNode }) {
       type="submit"
       disabled={pending}
       aria-disabled={pending}
-      className="rounded-lg bg-emerald-700 px-4 py-2.5 font-medium text-white transition-opacity hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:opacity-60"
+      className="btn btn-primary min-h-12 text-base"
     >
       {pending ? "Please wait…" : children}
     </button>

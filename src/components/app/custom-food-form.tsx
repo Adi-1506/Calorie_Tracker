@@ -30,7 +30,7 @@ export function CustomFoodForm({ meal, date, name, barcode }: { meal?: string; d
           <Field name="fatG" label="Fat (g)" type="number" inputMode="decimal" min={0} errors={err("fatG")} />
           <Field name="fiberG" label="Fibre (g)" type="number" inputMode="decimal" min={0} required={false} errors={err("fiberG")} />
         </div>
-        <p className="text-xs text-neutral-600 dark:text-neutral-400">
+        <p className="text-xs text-muted">
           Check the label on the pack. If it only gives values per serving, divide by the serving weight and multiply by 100.
         </p>
       </fieldset>

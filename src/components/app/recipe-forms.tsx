@@ -7,15 +7,15 @@ import { initialFormState, type FormState } from "@/lib/validation/auth";
 import { MEALS, recipeSchema } from "@/lib/validation/food";
 
 const small =
-  "rounded-lg border border-neutral-300 bg-transparent px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:border-neutral-700 dark:bg-neutral-950";
+  "input text-sm";
 const primary =
-  "rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700";
+  "btn btn-primary";
 
 function InlineError({ state }: { state: FormState }) {
   if (state.status !== "error") return null;
   const message = state.message ?? Object.values(state.fieldErrors ?? {})[0]?.[0];
   return message ? (
-    <p role="alert" className="w-full text-sm text-red-700 dark:text-red-400">
+    <p role="alert" className="w-full text-sm text-danger">
       {message}
     </p>
   ) : null;
@@ -56,7 +56,7 @@ export function AddIngredientRow({
     <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="font-medium">{food.name}</p>
-        <p className="text-xs text-neutral-600 dark:text-neutral-400">
+        <p className="text-xs text-muted">
           {food.brand ? `${food.brand} · ` : ""}
           {Math.round(food.calories)} kcal per 100 g
         </p>
@@ -115,7 +115,7 @@ export function LogRecipeForm({ recipeId, date, defaultMeal }: { recipeId: strin
           ))}
         </select>
       </label>
-      <button className="rounded-lg bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800">Log it</button>
+      <button className="btn btn-primary">Log it</button>
       <InlineError state={state} />
     </form>
   );

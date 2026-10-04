@@ -64,7 +64,7 @@ export function OnboardingForm({ defaults = {} }: { defaults?: OnboardingDefault
         defaultValue={defaults.allergies} label="Allergies (optional)" hint="Separate with commas, for example peanuts, gluten" required={false} errors={err("allergies")} />
       </div>
       <input type="hidden" name="timezone" value={timezone} />
-      <p className="text-xs text-neutral-600 dark:text-neutral-400">
+      <p className="text-xs text-muted">
         This app gives general guidance, not medical advice. If you are pregnant, have a medical condition or a history of
         eating disorders, please check with a doctor or dietitian before changing what you eat.
       </p>

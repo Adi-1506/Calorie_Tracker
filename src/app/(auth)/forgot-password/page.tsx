@@ -12,10 +12,10 @@ export const metadata: Metadata = {
 export default async function ForgotPasswordPage() {
   return (
     <>
-      <h1 className="mb-1 text-2xl font-semibold">Reset your password</h1>
-      <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-400">
+      <h1 className="mb-1 font-display text-[1.75rem] font-bold tracking-tight">Reset your password</h1>
+      <p className="mb-6 text-sm text-muted">
         Enter your email and we&apos;ll send you a link.{" "}
-        <Link href="/login" className="underline underline-offset-4">
+        <Link href="/login" className="link">
           Back to log in
         </Link>
       </p>
