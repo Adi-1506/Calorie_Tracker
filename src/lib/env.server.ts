@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { parseEnv } from "./env-parse";
 
 // Server-only secrets (security items 1 and 3). Importing this file from a
 // Client Component fails the build because of the "server-only" import.
@@ -18,13 +19,23 @@ export type ServerEnv = z.infer<typeof serverSchema>;
 let cached: ServerEnv | undefined;
 
 export function serverEnv(): ServerEnv {
-  cached ??= serverSchema.parse({
-    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY || undefined,
-    ipHashSalt: process.env.IP_HASH_SALT,
-    healthDataEncryptionKey: process.env.HEALTH_DATA_ENCRYPTION_KEY || undefined,
-    usdaApiKey: process.env.USDA_API_KEY || undefined,
-  });
+  cached ??= parseEnv(
+    serverSchema,
+    {
+      supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY || undefined,
+      ipHashSalt: process.env.IP_HASH_SALT,
+      healthDataEncryptionKey: process.env.HEALTH_DATA_ENCRYPTION_KEY || undefined,
+      usdaApiKey: process.env.USDA_API_KEY || undefined,
+    },
+    {
+      supabaseServiceRoleKey: "SUPABASE_SERVICE_ROLE_KEY",
+      turnstileSecretKey: "TURNSTILE_SECRET_KEY",
+      ipHashSalt: "IP_HASH_SALT (at least 16 characters)",
+      healthDataEncryptionKey: "HEALTH_DATA_ENCRYPTION_KEY",
+      usdaApiKey: "USDA_API_KEY",
+    },
+  );
   return cached;
 }
 
