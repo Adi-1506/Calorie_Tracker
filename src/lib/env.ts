@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseEnv } from "./env-parse";
+import { normalizeSiteUrl } from "./site-url";
 
 // Values that are safe to ship to the browser. Each one is referenced by its
 // full name so Next.js can inline it at build time.
@@ -18,7 +19,7 @@ export function publicEnv(): PublicEnv {
   cached ??= parseEnv(
     publicSchema,
     {
-      siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+      siteUrl: normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL),
       supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       turnstileSiteKey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || undefined,

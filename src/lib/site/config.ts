@@ -1,3 +1,4 @@
+import { normalizeSiteUrl } from "@/lib/site-url";
 // Site-wide facts for the marketing pages, metadata and structured data.
 // Optional business details come from env vars so nothing is invented: pages
 // and JSON-LD only show an address, phone or email once the owner sets them.
@@ -26,7 +27,7 @@ function parseGeo(value: string | undefined) {
   return Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : undefined;
 }
 
-export const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+export const siteUrl = () => normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL) ?? "http://localhost:3000";
 
 export const NAV = [
   { href: "/features", label: "Features" },
