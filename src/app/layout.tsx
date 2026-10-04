@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 import { connection } from "next/server";
+import { RegisterServiceWorker } from "@/components/pwa/register-sw";
 import { CookieConsent } from "@/components/site/cookie-consent";
 import { SITE, siteUrl } from "@/lib/site/config";
 import "./globals.css";
@@ -17,6 +18,15 @@ export const metadata: Metadata = {
   applicationName: SITE.name,
   openGraph: { siteName: SITE.name, type: "website", locale: "en_IN" },
   twitter: { card: "summary_large_image" },
+  appleWebApp: { capable: true, title: SITE.name, statusBarStyle: "default" },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8f7f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#211d19" },
+  ],
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
@@ -30,6 +40,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col bg-ground text-ink">
         {children}
+        {/* Off in development so hot reload isn't served stale files; NEXT_PUBLIC_ENABLE_SW=1 turns it on for testing. */}
+        <RegisterServiceWorker enabled={process.env.NODE_ENV === "production" || process.env.NEXT_PUBLIC_ENABLE_SW === "1"} />
         <CookieConsent gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || undefined} />
       </body>
     </html>

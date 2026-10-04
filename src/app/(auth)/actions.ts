@@ -185,7 +185,7 @@ export async function logout(): Promise<void> {
   } = await supabase.auth.getUser();
   await supabase.auth.signOut({ scope: "local" });
   if (user) await audit("logout", { userId: user.id });
-  redirect("/login");
+  redirect("/login?signedout=1");
 }
 
 export async function logoutEverywhere(): Promise<void> {
@@ -195,7 +195,7 @@ export async function logoutEverywhere(): Promise<void> {
   } = await supabase.auth.getUser();
   await supabase.auth.signOut({ scope: "global" });
   if (user) await audit("logout_everywhere", { userId: user.id });
-  redirect("/login");
+  redirect("/login?signedout=1");
 }
 
 // ---------------------------------------------------------------------------

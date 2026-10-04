@@ -17,8 +17,8 @@ Being built in steps, each as its own pull request:
 1. Architecture and database schema
 2. Auth and security
 3. Core tracking features
-4. **Marketing pages and SEO** ← current
-5. PWA and testing
+4. Marketing pages and SEO
+5. **PWA and testing** ← current
 
 ## Local setup
 

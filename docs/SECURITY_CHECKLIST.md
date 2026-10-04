@@ -69,8 +69,8 @@ Build steps: **1** architecture & schema · **2** auth & security · **3** core 
 | # | Requirement | Implementation | Tests | Status |
 |---|---|---|---|---|
 | 38 | CSP with nonces, SRI on third-party scripts, analytics only after consent | Nonce CSP with `strict-dynamic`, no inline/eval scripts in production. Inline styles are allowed (React style attributes and the Turnstile widget need them). Turnstile can't use SRI (Cloudflare changes the file), and neither can Google's gtag.js. GA4 loads only after the visitor clicks "Allow analytics" (`src/components/site/cookie-consent.tsx`); nothing is shown or loaded when Do Not Track or Global Privacy Control is on, and the CSP adds Google's hosts only when a GA id is configured. | `csp.test.ts`, `consent.test.ts`; E2E: no request to Google before consent, one after | ✅ 4 (SRI not possible for Turnstile and gtag.js) |
-| 39 | Service worker never caches authenticated/personal data; clear caches on logout | Network-only for `/api` and `/app`; logout clears caches and storage | Tests (step 5) | ⬜ 5 |
-| 40 | Capacitor: Keychain/Keystore tokens, biometric lock, hidden app-switcher previews, no sensitive logs, consider pinning | Capacitor config and secure storage plugin | Manual checklist (step 5) | ⬜ 5 |
+| 39 | Service worker never caches authenticated/personal data; clear caches on logout | `src/app/sw.js/route.ts` caches only hashed build files, icons and the public `/offline` page; page loads, `/app`, `/api`, auth routes and data requests always go to the network. Caches are versioned per deploy. Logging out and deleting an account clear the offline queue (IndexedDB) and Kalo's caches (`src/components/pwa/clear-offline-data.tsx`). `worker-src 'self'` in the CSP. | `csp.test.ts`, `offline/schema.test.ts`; E2E: cache contents after browsing the app, offline logging and sync, queue cleared on log out | ✅ 5 |
+| 40 | Capacitor: Keychain/Keystore tokens, biometric lock, hidden app-switcher previews, no sensitive logs, consider pinning | `capacitor.config.json` loads the live HTTPS site only (no cleartext, no mixed content, no extra navigation hosts); the session stays in HttpOnly cookies, so no tokens sit in app storage. Biometric lock, app-switcher privacy screens and pinning need native plugins and are listed in `docs/MOBILE_APPS.md` for when the store apps are built. | Manual checklist | 🟡 5 (native plugins when store apps are built) |
 | 41 | `frame-ancestors 'none'`; `Cache-Control: no-store` on sensitive pages | CSP `frame-ancestors 'none'` + `X-Frame-Options: DENY`; `no-store` on `/app/*`, auth pages and `/auth/*` | Verified on a production build | ✅ 2 |
 
 ## Supply chain, CI and operations (42–48)
@@ -81,7 +81,7 @@ Build steps: **1** architecture & schema · **2** auth & security · **3** core 
 | 43 | SAST, secret scanning, block merges on high severity | CodeQL (`security-extended`) + gitleaks in CI. Make both required checks in branch protection. | CI | ✅ 2 |
 | 44 | Branch protection, required reviews, signed commits, separate environments and keys | GitHub settings + Vercel environments; steps in `docs/DEPLOYMENT.md` | Manual (repo owner) | ⬜ manual |
 | 45 | Secret rotation schedule and incident-response runbook | `docs/INCIDENT_RESPONSE.md` | — | ✅ 2 |
-| 46 | WAF/DDoS, SPF/DKIM/DMARC, CAA, `security.txt` | Cloudflare + DNS once a domain exists; `public/.well-known/security.txt` (step 4) | Manual | ⬜ 4 |
+| 46 | WAF/DDoS, SPF/DKIM/DMARC, CAA, `security.txt` | Cloudflare + DNS once a domain exists; `/.well-known/security.txt` served by `src/app/.well-known/security.txt/route.ts` | Manual | 🟡 5 (security.txt done; WAF and DNS records need a custom domain) |
 | 47 | Error monitoring with PII scrubbing | Sentry with `beforeSend` scrubbing | — | ⬜ 5 |
 | 48 | OWASP Top 10 / ASVS L2 review and pre-launch pen-test checklist | `docs/PENTEST_CHECKLIST.md` | — | ⬜ 5 |
 

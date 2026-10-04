@@ -1,0 +1,12 @@
+{
+  "appId": "app.kalo.tracker",
+  "appName": "Kalo",
+  "webDir": "capacitor-shell",
+  "server": {
+    "url": "https://kalo-app.vercel.app/app",
+    "cleartext": false,
+    "allowNavigation": []
+  },
+  "android": { "allowMixedContent": false },
+  "ios": { "contentInset": "automatic" }
+}
