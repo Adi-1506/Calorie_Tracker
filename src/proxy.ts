@@ -14,6 +14,8 @@ export async function proxy(request: NextRequest) {
   const csp = buildCsp(nonce, {
     isDev: process.env.NODE_ENV === "development",
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    analytics: Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID),
+    map: Boolean(process.env.NEXT_PUBLIC_BUSINESS_GEO),
   });
 
   const requestHeaders = new Headers(request.headers);

@@ -15,9 +15,9 @@ A calorie and nutrition tracker that works as a responsive website and an instal
 Being built in steps, each as its own pull request:
 
 1. Architecture and database schema
-2. **Auth and security** ← current
+2. Auth and security
 3. Core tracking features
-4. Marketing pages and SEO
+4. **Marketing pages and SEO** ← current
 5. PWA and testing
 
 ## Local setup
@@ -76,6 +76,16 @@ With Docker running, `npx supabase start` runs the whole stack locally using `su
 ## Environment variables
 
 See [.env.example](.env.example). Variables starting with `NEXT_PUBLIC_` are sent to the browser; everything else stays on the server.
+
+In Vercel, add `NEXT_PUBLIC_` variables as **Config** and everything else as **Secret**.
+
+Optional site settings (leave blank to hide the matching section):
+
+| Variable | Shows |
+|---|---|
+| `NEXT_PUBLIC_CONTACT_EMAIL` | Contact email on the contact page and in the legal pages |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Google Analytics 4, loaded only after cookie consent |
+| `NEXT_PUBLIC_BUSINESS_ADDRESS`, `_PHONE`, `_HOURS`, `_GEO` | Office map, directions link and LocalBusiness schema |
 
 ## Deployment
 

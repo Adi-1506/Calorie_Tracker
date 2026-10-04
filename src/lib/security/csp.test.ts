@@ -26,6 +26,16 @@ describe("buildCsp (items 18, 38, 41)", () => {
     expect(buildCsp("n", { isDev: true })).toContain("'unsafe-eval'");
   });
 
+  it("adds Google Analytics and map hosts only when configured", () => {
+    expect(csp).not.toContain("google");
+    expect(csp).not.toContain("openstreetmap");
+    const withGa = buildCsp("n", { analytics: true, map: true });
+    expect(withGa).toMatch(/connect-src [^;]*https:\/\/\*\.google-analytics\.com/);
+    expect(withGa).toMatch(/frame-src [^;]*https:\/\/www\.openstreetmap\.org/);
+    // Script sources stay nonce-only either way.
+    expect(withGa.split("; ").find((d) => d.startsWith("script-src"))).not.toContain("google");
+  });
+
   it("creates a different nonce every time", () => {
     expect(createNonce()).not.toBe(createNonce());
   });

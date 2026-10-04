@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TrackEvent } from "@/components/site/track-event";
 
 // Thank-you page after signup; also the analytics conversion page (section 2).
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function CheckEmailPage() {
         </Link>
         .
       </p>
+      <TrackEvent event="sign_up" />
     </div>
   );
 }

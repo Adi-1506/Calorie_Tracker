@@ -150,14 +150,14 @@ export function FormMessage({ state }: { state: FormState }) {
   return null;
 }
 
-export function SubmitButton({ children }: { children: React.ReactNode }) {
+export function SubmitButton({ children, className = "btn-primary" }: { children: React.ReactNode; className?: string }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       disabled={pending}
       aria-disabled={pending}
-      className="btn btn-primary min-h-12 text-base"
+      className={`btn ${className} min-h-12 text-base`}
     >
       {pending ? "Please wait…" : children}
     </button>

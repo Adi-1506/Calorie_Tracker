@@ -2,15 +2,20 @@
 // Scripts must carry the nonce; 'strict-dynamic' lets those scripts load their
 // own dependencies. Inline styles stay allowed because React style attributes
 // and the Turnstile widget rely on them; inline scripts do not.
-export function buildCsp(nonce: string, { isDev = false, supabaseUrl = "" } = {}) {
+// Google Analytics hosts are added only when GA4 is configured; the script
+// itself still loads only after cookie consent (src/components/site/cookie-consent.tsx).
+const GA_CONNECT = ["https://*.google-analytics.com", "https://*.analytics.google.com", "https://www.googletagmanager.com"];
+const GA_IMG = ["https://*.google-analytics.com", "https://*.googletagmanager.com"];
+
+export function buildCsp(nonce: string, { isDev = false, supabaseUrl = "", analytics = false, map = false } = {}) {
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
     "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(isDev ? ["'unsafe-eval'"] : [])],
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "blob:", "data:"],
+    "img-src": ["'self'", "blob:", "data:", ...(analytics ? GA_IMG : [])],
     "font-src": ["'self'"],
-    "connect-src": ["'self'", ...(supabaseUrl ? [supabaseUrl] : [])],
-    "frame-src": ["https://challenges.cloudflare.com"],
+    "connect-src": ["'self'", ...(supabaseUrl ? [supabaseUrl] : []), ...(analytics ? GA_CONNECT : [])],
+    "frame-src": ["https://challenges.cloudflare.com", ...(map ? ["https://www.openstreetmap.org"] : [])],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
     "form-action": ["'self'"],

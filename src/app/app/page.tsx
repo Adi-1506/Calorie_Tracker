@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { addWater, copyEntries, deleteEntry } from "@/app/app/actions";
 import { BadgeToast } from "@/components/app/badge-toast";
+import { TrackEvent } from "@/components/site/track-event";
 import { CalorieRing, Ring } from "@/components/app/rings";
 import { requireUser } from "@/lib/auth";
 import { getProfile, getTargets, profileToday } from "@/lib/data/profile";
@@ -79,6 +80,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/app">)
       </div>
 
       {newBadges.length > 0 && <BadgeToast badges={newBadges} />}
+      {newBadges.some((b) => b.code === "first_log") && <TrackEvent event="first_food_logged" />}
 
       <section aria-labelledby="summary-heading" className="card flex flex-col items-center gap-5 p-5 sm:flex-row sm:justify-around sm:p-7">
         <h2 id="summary-heading" className="sr-only">
