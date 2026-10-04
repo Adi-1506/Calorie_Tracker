@@ -10,7 +10,10 @@ export type AuditAction =
   | "password_reset_requested"
   | "password_changed"
   | "rate_limited"
-  | "bot_check_failed";
+  | "bot_check_failed"
+  | "onboarding_completed"
+  | "targets_changed"
+  | "custom_food_created";
 
 /**
  * Appends to the immutable audit log (security item 31). Never pass health

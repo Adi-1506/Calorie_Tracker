@@ -44,7 +44,7 @@ npm run dev                  # http://localhost:3000
    - **Authentication → URL Configuration:** set **Site URL** to your site (e.g. `http://localhost:3000` for local use, your Vercel URL in production) and add `http://localhost:3000/**` and `https://<your-domain>/**` to **Redirect URLs**.
    - **Authentication → Email Templates:** paste the contents of `supabase/templates/confirmation.html` (Confirm signup), `recovery.html` (Reset password) and `email_change.html` (Change email address). These links work even when the email is opened on another device.
    - The default email sender is heavily rate limited; set up custom SMTP (e.g. Resend's free tier) before launch.
-4. Copy the project URL and anon key into `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) and the service-role key into `SUPABASE_SERVICE_ROLE_KEY` (**Project Settings → API**). The service-role key is server-only and must never get a `NEXT_PUBLIC_` prefix. Generate `IP_HASH_SALT` with `openssl rand -hex 32`.
+4. Copy the project URL and anon key into `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) and the service-role key into `SUPABASE_SERVICE_ROLE_KEY` (**Project Settings → API**). The service-role key is server-only and must never get a `NEXT_PUBLIC_` prefix. Generate `IP_HASH_SALT` with `openssl rand -hex 32` and `HEALTH_DATA_ENCRYPTION_KEY` with `openssl rand -base64 32` (on Windows without OpenSSL: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`). Keep a safe copy of the encryption key: if it's lost, stored weights can't be read.
 
 ### Supabase (local, optional)
 
