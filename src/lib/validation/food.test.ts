@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { customFoodSchema, logExternalFoodSchema, logFoodSchema, quickAddSchema, waterSchema } from "./food";
+import {
+  copyEntriesSchema,
+  customFoodSchema,
+  favoriteSchema,
+  importedLineSchema,
+  importRecipeSchema,
+  ingredientSchema,
+  logExternalFoodSchema,
+  logFoodSchema,
+  logRecipeSchema,
+  quickAddSchema,
+  recipeSchema,
+  waterSchema,
+} from "./food";
 
 const id = "6f7b9a53-8044-4cfd-81b1-5dcaecde191a";
 
@@ -41,5 +54,39 @@ describe("food validation", () => {
   it("caps water per entry", () => {
     expect(waterSchema.safeParse({ ml: "250", date: "2026-10-04" }).success).toBe(true);
     expect(waterSchema.safeParse({ ml: "99999", date: "2026-10-04" }).success).toBe(false);
+  });
+});
+
+describe("faster logging schemas", () => {
+  it("copyEntries treats an empty meal as the whole day", () => {
+    const r = copyEntriesSchema.parse({ fromDate: "2026-10-03", toDate: "2026-10-04", meal: "" });
+    expect(r.meal).toBeUndefined();
+    expect(copyEntriesSchema.safeParse({ fromDate: "2026-10-03", toDate: "2026-10-04", meal: "brunch" }).success).toBe(false);
+  });
+
+  it("recipes need a name and sensible servings", () => {
+    expect(recipeSchema.safeParse({ name: " ", servings: "2" }).success).toBe(false);
+    expect(recipeSchema.safeParse({ name: "Sambar", servings: "0" }).success).toBe(false);
+    expect(recipeSchema.parse({ name: "Sambar", servings: "4" }).servings).toBe(4);
+  });
+
+  it("ingredients and recipe logs need a positive amount", () => {
+    expect(ingredientSchema.safeParse({ recipeId: id, foodId: id, grams: "0" }).success).toBe(false);
+    expect(ingredientSchema.parse({ recipeId: id, foodId: id, grams: "150" }).grams).toBe(150);
+    const log = { recipeId: id, servings: "0", meal: "lunch", date: "2026-10-04", clientId: id };
+    expect(logRecipeSchema.safeParse(log).success).toBe(false);
+    expect(logRecipeSchema.safeParse({ ...log, servings: "1.5" }).success).toBe(true);
+  });
+
+  it("import needs a full link", () => {
+    expect(importRecipeSchema.safeParse({ url: "" }).success).toBe(false);
+    expect(importRecipeSchema.safeParse({ url: "example.com/recipe" }).success).toBe(false);
+    expect(importRecipeSchema.safeParse({ url: "https://example.com/recipe" }).success).toBe(true);
+  });
+
+  it("imported line index stays within the list limit", () => {
+    expect(importedLineSchema.safeParse({ recipeId: id, index: "60" }).success).toBe(false);
+    expect(importedLineSchema.parse({ recipeId: id, index: "3" }).index).toBe(3);
+    expect(favoriteSchema.safeParse({ foodId: id, favorite: "yes" }).success).toBe(false);
   });
 });

@@ -65,6 +65,11 @@ export const customFoodSchema = z
     fiberG: optionalAmount(100),
     servingLabel: z.string().trim().max(80).optional().or(z.literal("")),
     servingGrams: optionalAmount(5000),
+    barcode: z
+      .string()
+      .regex(/^[0-9]{8,14}$/, "Barcodes are 8 to 14 digits")
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
   })
   .refine((v) => v.proteinG + v.carbsG + v.fatG <= 100, {
     message: "Protein, carbs and fat can't add up to more than 100 g per 100 g",
@@ -87,3 +92,38 @@ export const deleteEntrySchema = z.object({
 });
 
 export const searchQuerySchema = z.string().trim().min(2).max(100);
+
+export const favoriteSchema = z.object({ foodId: z.uuid(), favorite: z.enum(["0", "1"]) });
+
+export const copyEntriesSchema = z.object({
+  fromDate: dateSchema,
+  toDate: dateSchema,
+  meal: mealSchema.optional().or(z.literal("").transform(() => undefined)),
+});
+
+export const recipeSchema = z.object({
+  name: z.string().trim().min(1, "Give your recipe a name").max(200),
+  servings: z.coerce.number({ error: "Enter how many servings it makes" }).min(0.5, "At least half a serving").max(100, "At most 100"),
+});
+
+export const ingredientSchema = z.object({
+  recipeId: z.uuid(),
+  foodId: z.uuid(),
+  grams: amount("grams", 10000).refine((n) => n > 0, "Enter grams"),
+});
+
+export const removeIngredientSchema = z.object({ recipeId: z.uuid(), ingredientId: z.uuid() });
+
+export const logRecipeSchema = z.object({
+  recipeId: z.uuid(),
+  servings: amount("servings", 50).refine((n) => n > 0, "Enter servings"),
+  meal: mealSchema,
+  date: dateSchema,
+  clientId,
+});
+
+export const importRecipeSchema = z.object({
+  url: z.string().trim().min(1, "Paste a link to a recipe").max(2048, "That link is too long").url("Paste a full link, starting with https://"),
+});
+
+export const importedLineSchema = z.object({ recipeId: z.uuid(), index: z.coerce.number().int().min(0).max(59) });

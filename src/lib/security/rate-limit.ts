@@ -10,6 +10,7 @@ export const LIMITS = {
   foodSearch: { limit: 60, windowSeconds: 60 },
   externalFood: { limit: 30, windowSeconds: 60 },
   logWrite: { limit: 120, windowSeconds: 60 },
+  recipeImport: { limit: 10, windowSeconds: 60 * 60 },
 } as const;
 
 export type LimitName = keyof typeof LIMITS;

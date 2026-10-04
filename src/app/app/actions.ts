@@ -7,15 +7,26 @@ import { requireUser } from "@/lib/auth";
 import { getProfile, profileAge, profileToday } from "@/lib/data/profile";
 import { serverEnv, isProduction } from "@/lib/env.server";
 import { getOpenFoodFactsProduct, getUsdaFood, type ExternalFood } from "@/lib/food/external";
+import { importExternalFood } from "@/lib/food/import";
+import { parseRecipeHtml } from "@/lib/food/recipe-parse";
+import { safeFetchHtml, UnsafeUrlError } from "@/lib/security/safe-fetch";
 import { CALORIE_FLOOR, suggestTargets } from "@/lib/nutrition/targets";
 import { snapshotFor } from "@/lib/nutrition/snapshot";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/security/audit";
 import { encryptHealthValue, hasHealthDataKey } from "@/lib/security/health-crypto";
 import { rateLimitUser } from "@/lib/security/rate-limit";
 import type { FormState } from "@/lib/validation/auth";
+import { combine, getRecipe } from "@/lib/data/recipes";
 import {
+  copyEntriesSchema,
   customFoodSchema,
+  favoriteSchema,
+  importedLineSchema,
+  importRecipeSchema,
+  ingredientSchema,
+  logRecipeSchema,
+  recipeSchema,
+  removeIngredientSchema,
   deleteEntrySchema,
   logExternalFoodSchema,
   logFoodSchema,
@@ -161,6 +172,7 @@ type EntryInsert = {
   label: string;
   grams: number | null;
   food_id: string | null;
+  recipe_id?: string | null;
   calories: number;
   protein_g: number;
   carbs_g: number;
@@ -215,42 +227,6 @@ export async function logFood(_prev: FormState, formData: FormData): Promise<For
   });
   if (error) return error;
   backToDay(v.date, ctx.today);
-}
-
-/** Stores an external product in the shared catalogue (service role) and returns its id. */
-async function importExternalFood(food: ExternalFood): Promise<string | null> {
-  const admin = createAdminClient();
-  const existing = await admin
-    .from("foods")
-    .select("id")
-    .eq("source", food.source)
-    .eq("external_id", food.externalId)
-    .is("owner_id", null)
-    .maybeSingle();
-  if (existing.data) return existing.data.id;
-
-  const { data, error } = await admin
-    .from("foods")
-    .insert({
-      owner_id: null,
-      source: food.source,
-      external_id: food.externalId,
-      name: food.name,
-      brand: food.brand,
-      barcode: food.barcode,
-      is_verified: false,
-      ...food.per100g,
-    })
-    .select("id")
-    .single();
-  if (error) {
-    if (error.code === "23505") return importExternalFood(food); // imported concurrently
-    return null;
-  }
-  if (food.serving) {
-    await admin.from("food_servings").insert({ food_id: data.id, label: food.serving.label.slice(0, 80), grams: food.serving.grams });
-  }
-  return data.id;
 }
 
 export async function logExternalFood(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -331,6 +307,7 @@ export async function createCustomFood(_prev: FormState, formData: FormData): Pr
       carbs_g: v.carbsG,
       fat_g: v.fatG,
       fiber_g: v.fiberG ?? null,
+      barcode: v.barcode ?? null,
     })
     .select("id")
     .single();
@@ -369,3 +346,160 @@ export async function deleteEntry(formData: FormData): Promise<void> {
   refresh();
 }
 
+
+export async function toggleFavorite(formData: FormData): Promise<void> {
+  const { supabase, user } = await requireUser();
+  const parsed = favoriteSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  if (!(await rateLimitUser("logWrite", user.id))) return;
+  if (parsed.data.favorite === "1") {
+    // RLS on foods means you can only favourite a food you can see.
+    const { data: food } = await supabase.from("foods").select("id").eq("id", parsed.data.foodId).maybeSingle();
+    if (food) await supabase.from("favorite_foods").upsert({ food_id: food.id }, { onConflict: "user_id,food_id", ignoreDuplicates: true });
+  } else {
+    await supabase.from("favorite_foods").delete().eq("food_id", parsed.data.foodId);
+  }
+  refresh();
+}
+
+const MAX_COPY = 100;
+
+/** Copies one meal (or a whole day) from one date to another, keeping the original nutrient snapshots. */
+export async function copyEntries(formData: FormData): Promise<void> {
+  const ctx = await loggingContext();
+  const parsed = copyEntriesSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const { fromDate, toDate, meal } = parsed.data;
+  if (fromDate === toDate || !reasonableDate(fromDate, ctx.today) || !reasonableDate(toDate, ctx.today)) return;
+  if (!(await rateLimitUser("logWrite", ctx.user.id))) return;
+
+  let query = ctx.supabase
+    .from("meal_entries")
+    .select("meal, food_id, recipe_id, label, grams, calories, protein_g, carbs_g, fat_g, nutrients, is_quick_add")
+    .eq("logged_on", fromDate)
+    .order("created_at")
+    .limit(MAX_COPY);
+  if (meal) query = query.eq("meal", meal);
+  const { data } = await query;
+  if (!data?.length) return;
+
+  await ctx.supabase.from("meal_entries").insert(data.map((e) => ({ ...e, logged_on: toDate })));
+  refresh();
+}
+
+// ---------------------------------------------------------------------------
+// Recipes
+// ---------------------------------------------------------------------------
+export async function createRecipe(_prev: FormState, formData: FormData): Promise<FormState> {
+  const { supabase, user } = await requireUser();
+  const parsed = recipeSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  if (!(await rateLimitUser("logWrite", user.id))) return { status: "error", message: SLOW_DOWN };
+  const { data, error } = await supabase
+    .from("recipes")
+    .insert({ name: parsed.data.name, servings: parsed.data.servings })
+    .select("id")
+    .single();
+  if (error) return { status: "error", message: GENERIC };
+  redirect(`/app/recipes/${data.id}`);
+}
+
+export async function addIngredient(_prev: FormState, formData: FormData): Promise<FormState> {
+  const { supabase, user } = await requireUser();
+  const parsed = ingredientSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  if (!(await rateLimitUser("logWrite", user.id))) return { status: "error", message: SLOW_DOWN };
+  // RLS checks that the recipe is yours and the food is one you can see.
+  const { error } = await supabase
+    .from("recipe_ingredients")
+    .insert({ recipe_id: parsed.data.recipeId, food_id: parsed.data.foodId, grams: parsed.data.grams });
+  if (error) return { status: "error", message: GENERIC };
+  redirect(`/app/recipes/${parsed.data.recipeId}`);
+}
+
+export async function removeIngredient(formData: FormData): Promise<void> {
+  const { supabase } = await requireUser();
+  const parsed = removeIngredientSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  await supabase.from("recipe_ingredients").delete().eq("id", parsed.data.ingredientId).eq("recipe_id", parsed.data.recipeId);
+  refresh();
+}
+
+export async function deleteRecipe(formData: FormData): Promise<void> {
+  const { supabase } = await requireUser();
+  const id = z.uuid().safeParse(formData.get("recipeId"));
+  if (!id.success) return;
+  await supabase.from("recipes").delete().eq("id", id.data);
+  redirect("/app/recipes");
+}
+
+export async function logRecipe(_prev: FormState, formData: FormData): Promise<FormState> {
+  const ctx = await loggingContext();
+  const parsed = logRecipeSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  const v = parsed.data;
+  const recipe = await getRecipe(ctx.supabase, v.recipeId);
+  if (!recipe) return { status: "error", message: "That recipe couldn't be found." };
+  if (recipe.ingredients.length === 0) return { status: "error", message: "Add some ingredients first." };
+
+  const portion = combine([recipe.perServing], 1 / v.servings);
+  const error = await insertEntry(ctx, {
+    meal: v.meal,
+    logged_on: v.date,
+    label: `${recipe.name}, ${v.servings} ${v.servings === 1 ? "serving" : "servings"}`.slice(0, 200),
+    grams: null,
+    food_id: null,
+    recipe_id: recipe.id,
+    ...portion,
+    is_quick_add: false,
+    client_id: v.clientId,
+  });
+  if (error) return error;
+  backToDay(v.date, ctx.today);
+}
+
+export async function importRecipe(_prev: FormState, formData: FormData): Promise<FormState> {
+  const { supabase, user } = await requireUser();
+  const parsed = importRecipeSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  if (!(await rateLimitUser("recipeImport", user.id))) {
+    return { status: "error", message: "You've imported a lot of recipes. Please try again in an hour." };
+  }
+
+  let page: { url: string; html: string };
+  try {
+    page = await safeFetchHtml(parsed.data.url);
+  } catch (e) {
+    return { status: "error", message: e instanceof UnsafeUrlError ? e.message : "We couldn't open that page." };
+  }
+  const recipe = parseRecipeHtml(page.html);
+  if (!recipe) {
+    return { status: "error", message: "We couldn't find a recipe on that page. You can still build it by hand." };
+  }
+
+  const { data, error } = await supabase
+    .from("recipes")
+    .insert({
+      name: recipe.name,
+      servings: recipe.servings,
+      source_url: page.url.slice(0, 2048),
+      imported_ingredients: recipe.ingredients,
+      site_calories_per_serving: recipe.caloriesPerServing,
+    })
+    .select("id")
+    .single();
+  if (error) return { status: "error", message: GENERIC };
+  redirect(`/app/recipes/${data.id}`);
+}
+
+/** Ticks an imported ingredient line off the to-do list. */
+export async function dismissImportedLine(formData: FormData): Promise<void> {
+  const { supabase } = await requireUser();
+  const parsed = importedLineSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const { data } = await supabase.from("recipes").select("imported_ingredients").eq("id", parsed.data.recipeId).maybeSingle();
+  if (!data) return;
+  const lines = (data.imported_ingredients as string[]).filter((_, i) => i !== parsed.data.index);
+  await supabase.from("recipes").update({ imported_ingredients: lines }).eq("id", parsed.data.recipeId);
+  refresh();
+}

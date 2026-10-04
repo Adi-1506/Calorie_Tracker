@@ -6,7 +6,7 @@ import { errorsFor, Field, FormMessage, SubmitButton, useClientValidation } from
 import { initialFormState } from "@/lib/validation/auth";
 import { customFoodSchema } from "@/lib/validation/food";
 
-export function CustomFoodForm({ meal, date, name }: { meal?: string; date?: string; name?: string }) {
+export function CustomFoodForm({ meal, date, name, barcode }: { meal?: string; date?: string; name?: string; barcode?: string }) {
   const [state, action] = useActionState(createCustomFood, initialFormState);
   const { clientErrors, onSubmit } = useClientValidation(customFoodSchema);
   const err = (field: string) => errorsFor(field, state, clientErrors);
@@ -15,6 +15,7 @@ export function CustomFoodForm({ meal, date, name }: { meal?: string; date?: str
       <FormMessage state={state} />
       {meal && <input type="hidden" name="meal" value={meal} />}
       {date && <input type="hidden" name="date" value={date} />}
+      {barcode && <input type="hidden" name="barcode" value={barcode} />}
       <Field name="name" label="Name" defaultValue={name} errors={err("name")} />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field name="nameLocal" label="Name in your language (optional)" required={false} errors={err("nameLocal")} />

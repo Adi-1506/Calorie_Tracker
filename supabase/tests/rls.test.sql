@@ -251,4 +251,24 @@ set role anon;
 select tests.throws($$select * from public.search_foods('dosa')$$, '42501');
 reset role;
 
+-- ---------------------------------------------------------------------------
+-- Recipes (step 3b): ingredients only on your own recipe, only visible foods
+-- ---------------------------------------------------------------------------
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000e1', 'e@example.test');
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c","role":"authenticated"}', false);
+insert into public.recipes (id, name, servings, imported_ingredients) values
+  ('30000000-0000-0000-0000-0000000000c1', 'C''s sambar', 4, '{"1 cup toor dal"}');
+insert into public.recipe_ingredients (recipe_id, food_id, grams)
+  select '30000000-0000-0000-0000-0000000000c1', id, 150 from public.foods where external_id = 'in-dal-tadka';
+select tests.eq(tests.rows('select * from public.recipe_ingredients'), 1, 'C adds an ingredient to own recipe');
+select tests.throws($$update public.recipes set site_calories_per_serving = 1 where id = '30000000-0000-0000-0000-0000000000c1'$$, '42501');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000e1","role":"authenticated"}', false);
+select tests.eq(tests.rows('select * from public.recipes'), 0, 'E cannot see C''s recipe');
+select tests.throws($$insert into public.recipe_ingredients (recipe_id, food_id, grams)
+  select '30000000-0000-0000-0000-0000000000c1', id, 10 from public.foods where external_id = 'in-idli'$$, '42501');
+select tests.throws($$insert into public.recipes (name, imported_ingredients) values ('x', array_fill('a'::text, array[61]))$$, '23514');
+reset role;
+
 \echo 'All RLS tests passed.'

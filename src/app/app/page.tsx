@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { addWater, deleteEntry } from "@/app/app/actions";
+import { addWater, copyEntries, deleteEntry } from "@/app/app/actions";
 import { CalorieRing, Ring } from "@/components/app/rings";
 import { requireUser } from "@/lib/auth";
 import { getProfile, getTargets, profileToday } from "@/lib/data/profile";
@@ -86,6 +86,14 @@ export default async function DashboardPage({ searchParams }: PageProps<"/app">)
         )}
       </section>
 
+      {entries.length === 0 && (
+        <form action={copyEntries} className="-mt-2 text-center text-sm">
+          <input type="hidden" name="fromDate" value={addDays(date, -1)} />
+          <input type="hidden" name="toDate" value={date} />
+          <button className="underline underline-offset-4">Copy everything from the day before</button>
+        </form>
+      )}
+
       {MEALS.map((meal) => {
         const items = entries.filter((e) => e.meal === meal.value);
         const kcal = Math.round(items.reduce((s, e) => s + Number(e.calories), 0));
@@ -100,6 +108,16 @@ export default async function DashboardPage({ searchParams }: PageProps<"/app">)
                 Add<span className="sr-only"> to {meal.label}</span>
               </Link>
             </div>
+            {items.length === 0 && entries.length > 0 && (
+              <form action={copyEntries} className="mt-2 text-sm">
+                <input type="hidden" name="fromDate" value={addDays(date, -1)} />
+                <input type="hidden" name="toDate" value={date} />
+                <input type="hidden" name="meal" value={meal.value} />
+                <button className="text-neutral-600 underline underline-offset-4 dark:text-neutral-400">
+                  Copy {meal.label.toLowerCase()} from the day before
+                </button>
+              </form>
+            )}
             {items.length > 0 && (
               <ul className="mt-3 divide-y divide-neutral-200 dark:divide-neutral-800">
                 {items.map((e) => (
