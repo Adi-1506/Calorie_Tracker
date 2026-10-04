@@ -38,9 +38,28 @@ type FieldProps = {
   autoComplete?: string;
   errors?: string[];
   hint?: string;
+  required?: boolean;
+  defaultValue?: string | number;
+  inputMode?: "numeric" | "decimal" | "text";
+  step?: string;
+  min?: string | number;
+  max?: string | number;
 };
 
-export function Field({ name, label, type = "text", autoComplete, errors, hint }: FieldProps) {
+export function Field({
+  name,
+  label,
+  type = "text",
+  autoComplete,
+  errors,
+  hint,
+  required = true,
+  defaultValue,
+  inputMode,
+  step,
+  min,
+  max,
+}: FieldProps) {
   const describedBy = [hint ? `${name}-hint` : null, errors?.length ? `${name}-error` : null]
     .filter(Boolean)
     .join(" ");
@@ -54,7 +73,12 @@ export function Field({ name, label, type = "text", autoComplete, errors, hint }
         name={name}
         type={type}
         autoComplete={autoComplete}
-        required
+        required={required}
+        defaultValue={defaultValue}
+        inputMode={inputMode}
+        step={step}
+        min={min}
+        max={max}
         aria-invalid={errors?.length ? true : undefined}
         aria-describedby={describedBy || undefined}
         className="rounded-lg border border-neutral-300 bg-transparent px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 aria-[invalid=true]:border-red-600 dark:border-neutral-700"

@@ -21,7 +21,7 @@ Write down the timeline as you go (what happened, when, what you did).
 | `HEALTH_DATA_ENCRYPTION_KEY` | Vercel env | Only with a re-encryption migration; on leak, rotate and re-encrypt immediately |
 | `TURNSTILE_SECRET_KEY` | Cloudflare → Turnstile | Yearly |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe dashboard | Yearly, and immediately on any leak |
-| AI / USDA API keys | Provider dashboards | Yearly |
+| `ANTHROPIC_API_KEY`, `USDA_API_KEY` | Provider dashboards | Yearly |
 
 After rotating, update the value in Vercel (Preview and Production separately) and redeploy.
 

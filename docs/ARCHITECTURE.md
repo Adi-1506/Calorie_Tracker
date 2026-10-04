@@ -17,8 +17,16 @@ Supabase
     Postgres  → all tables RLS-protected (see supabase/migrations)
     Storage   → private "progress-photos" bucket, server-only access
 External APIs (server-side only)
-    Open Food Facts, USDA FoodData Central, AI provider, Stripe, Turnstile
+    Open Food Facts, USDA FoodData Central, Claude (Anthropic) for AI, Stripe, Turnstile
 ```
+
+## Food logging (step 3a)
+
+- **Search** runs `search_foods()` in Postgres with the user's session, so RLS limits results to the shared catalogue plus the user's own foods. Results from Open Food Facts and USDA stream in below (`src/lib/food/external.ts`); both are validated and clamped, and a slow or failing source simply contributes nothing.
+- **Logging an external product** sends only its id. The server fetches the product again, stores it in the shared catalogue with the service role, and logs it, so nutrient values never come from the browser.
+- **Snapshots:** each meal entry stores the calories and macros of the portion at log time (`src/lib/nutrition/snapshot.ts`), so later edits to a food don't rewrite history.
+- **Days** follow `profiles.timezone` (taken from the browser at onboarding), so "today" is the user's day, not the server's.
+- **Starter catalogue:** about 40 everyday foods from around the world and 40 Indian dishes from many regions, with local names and home portion sizes (katori, piece, tumbler). Any other dish is found through Open Food Facts or USDA, or added as a custom food.
 
 ## Principles
 
