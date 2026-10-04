@@ -3,7 +3,7 @@
   "appName": "Kalo",
   "webDir": "capacitor-shell",
   "server": {
-    "url": "https://kalo-app.vercel.app/app",
+    "url": "https://kalo-calories.vercel.app/app",
     "cleartext": false,
     "allowNavigation": []
   },
