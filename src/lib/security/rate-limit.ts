@@ -7,6 +7,8 @@ export const LIMITS = {
   signup: { limit: 5, windowSeconds: 60 * 60 },
   passwordReset: { limit: 3, windowSeconds: 60 * 60 },
   mfaVerify: { limit: 10, windowSeconds: 15 * 60 },
+  contact: { limit: 5, windowSeconds: 60 * 60 },
+  accountDelete: { limit: 5, windowSeconds: 60 * 60 },
   // Per signed-in user. External lookups hit third-party APIs, so they're tighter.
   foodSearch: { limit: 60, windowSeconds: 60 },
   externalFood: { limit: 30, windowSeconds: 60 },

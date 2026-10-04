@@ -210,7 +210,7 @@ export default async function ProgressPage() {
         </ul>
       </section>
 
-      <section aria-labelledby="export-heading" className="flex flex-col gap-3 rounded-[20px] border-2 border-dashed border-ink p-5">
+      <section id="export" aria-labelledby="export-heading" className="flex scroll-mt-24 flex-col gap-3 rounded-[20px] border-2 border-dashed border-ink p-5">
         <h2 id="export-heading" className="font-display text-lg font-bold">
           Download your data
         </h2>

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { disableTotp, logoutEverywhere } from "@/app/(auth)/actions";
 import { withdrawAiConsent } from "@/app/app/ai/actions";
 import { setHideNumbers } from "@/app/app/settings/actions";
+import Link from "next/link";
+import { DeleteAccountForm } from "@/components/app/delete-account-form";
 import { EnrollTotp } from "@/components/auth/mfa-forms";
 import { getProfile } from "@/lib/data/profile";
 import { requireUser } from "@/lib/auth";
@@ -82,6 +84,34 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         <form action={logoutEverywhere}>
           <button className="btn btn-sm">Log out on all devices</button>
         </form>
+      </section>
+
+      <section aria-labelledby="data-heading" className="card flex flex-col gap-3 p-5 sm:p-6">
+        <h2 id="data-heading" className="font-display text-xl font-bold">
+          Your data
+        </h2>
+        <p className="text-sm">
+          Download everything you&apos;ve logged as CSV or PDF from{" "}
+          <Link href="/app/progress#export" className="link">
+            Progress
+          </Link>
+          . Read how we handle it in our{" "}
+          <Link href="/privacy" className="link">
+            Privacy Policy
+          </Link>
+          .
+        </p>
+      </section>
+
+      <section aria-labelledby="delete-heading" className="card flex flex-col gap-3 border-chili p-5 sm:p-6">
+        <h2 id="delete-heading" className="font-display text-xl font-bold">
+          Delete account
+        </h2>
+        <p className="text-sm">
+          This permanently deletes your account, food log, weights, measurements, photos, recipes and reviews straight away. Download your data
+          first if you want to keep it.
+        </p>
+        <DeleteAccountForm />
       </section>
     </>
   );

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { applyAdaptiveTarget } from "@/app/app/actions";
 import { TargetsForm } from "@/components/app/targets-form";
+import { TrackEvent } from "@/components/site/track-event";
 import { getAdaptiveSuggestion } from "@/lib/data/adaptive";
 import { requireUser } from "@/lib/auth";
 import { getLatestWeightKg, getProfile, getTargets, profileAge, profileToday } from "@/lib/data/profile";
@@ -55,6 +56,7 @@ export default async function TargetsPage({ searchParams }: PageProps<"/app/targ
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+      {welcome && <TrackEvent event="onboarding_complete" />}
       <section aria-labelledby="targets-heading" className="flex flex-col gap-5 rounded-[26px] bg-night p-5 text-on-night sm:p-7">
         <div>
           <h1 id="targets-heading" className="font-display text-[2rem] font-extrabold leading-[1.05] tracking-tight sm:text-[2.5rem]">
