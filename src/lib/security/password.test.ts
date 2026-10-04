@@ -1,10 +1,9 @@
-import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { isPwnedPassword } from "./password";
+import { isPwnedPassword, sha1Hex } from "./password";
 
-function hibpResponse(password: string, count: number) {
-  const hash = createHash("sha1").update(password).digest("hex").toUpperCase();
-  return `0018A45C4D1DEF81644B54AB7F969B88D65:1\r\n${hash.slice(5)}:${count}\r\nFFFFF00000000000000000000000000000:0`;
+async function hibpResponse(phrase: string, count: number) {
+  const suffix = (await sha1Hex(phrase)).slice(5);
+  return `0018A45C4D1DEF81644B54AB7F969B88D65:1\r\n${suffix}:${count}\r\nFFFFF00000000000000000000000000000:0`;
 }
 
 describe("isPwnedPassword (item 23)", () => {
@@ -15,13 +14,19 @@ describe("isPwnedPassword (item 23)", () => {
     expect(url).toMatch(/^https:\/\/api\.pwnedpasswords\.com\/range\/[0-9A-F]{5}$/);
   });
 
+  it("hashes the same way as HIBP", async () => {
+    const fetchMock = vi.fn(async () => new Response(""));
+    await isPwnedPassword("password123456", fetchMock as unknown as typeof fetch);
+    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toMatch(/\/range\/98A16$/);
+  });
+
   it("detects a breached password", async () => {
-    const fetchMock = vi.fn(async () => new Response(hibpResponse("password123456", 1234)));
+    const fetchMock = vi.fn(async () => new Response(await hibpResponse("password123456", 1234)));
     expect(await isPwnedPassword("password123456", fetchMock as unknown as typeof fetch)).toBe(true);
   });
 
   it("ignores padding entries with a zero count", async () => {
-    const fetchMock = vi.fn(async () => new Response(hibpResponse("unique-phrase-for-test", 0)));
+    const fetchMock = vi.fn(async () => new Response(await hibpResponse("unique-phrase-for-test", 0)));
     expect(await isPwnedPassword("unique-phrase-for-test", fetchMock as unknown as typeof fetch)).toBe(false);
   });
 

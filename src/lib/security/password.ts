@@ -4,7 +4,7 @@
 export const PASSWORD_MIN = 12;
 export const PASSWORD_MAX = 128;
 
-async function sha1Hex(text: string) {
+export async function sha1Hex(text: string) {
   const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(text));
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
 }
