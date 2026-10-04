@@ -42,3 +42,14 @@ describe("ingredientSearchTerm", () => {
     expect(ingredientSearchTerm("500 g chicken thighs (boneless)")).toBe("chicken thighs");
   });
 });
+
+describe("entity decoding", () => {
+  it("decodes entities once, not twice", () => {
+    const html = `<script type="application/ld+json">${JSON.stringify({
+      "@type": "Recipe",
+      name: "Mac &amp;amp; cheese &quot;classic&quot;",
+      recipeIngredient: ["1 cup milk"],
+    })}</script>`;
+    expect(parseRecipeHtml(html)?.name).toBe('Mac &amp; cheese "classic"');
+  });
+});

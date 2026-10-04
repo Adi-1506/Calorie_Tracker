@@ -10,14 +10,14 @@ export type ParsedRecipe = {
 
 const LD_JSON = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
 
+const ENTITIES: Record<string, string> = { nbsp: " ", amp: "&", "#39": "'", apos: "'", quot: '"' };
+
 function clean(text: unknown, max: number): string {
   if (typeof text !== "string") return "";
   return text
     .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&quot;/g, '"')
+    // One pass, so "&amp;quot;" becomes "&quot;" rather than a quote.
+    .replace(/&(nbsp|amp|#39|apos|quot);/g, (_, name: string) => ENTITIES[name])
     .replace(/[\u0000-\u001f\u007f]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
