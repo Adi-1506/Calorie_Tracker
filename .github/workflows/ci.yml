@@ -21,7 +21,15 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm test
+      # Random placeholder secrets: the bundle check fails if any of them reach the browser.
+      - name: Generate placeholder secrets
+        run: |
+          for name in SUPABASE_SERVICE_ROLE_KEY IP_HASH_SALT TURNSTILE_SECRET_KEY HEALTH_DATA_ENCRYPTION_KEY; do
+            echo "$name=placeholder-$(openssl rand -hex 12)" >> "$GITHUB_ENV"
+          done
       - run: npm run build
+      - run: ./scripts/check-client-bundle.sh
 
   database:
     name: Schema and RLS tests

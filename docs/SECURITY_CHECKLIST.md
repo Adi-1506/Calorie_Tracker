@@ -11,37 +11,37 @@ Build steps: **1** architecture & schema · **2** auth & security · **3** core 
 
 | # | Requirement | Implementation | Tests | Status |
 |---|---|---|---|---|
-| 1 | Hide API keys; only `NEXT_PUBLIC_*` values reach the browser | `.env.example` separates public vs server-only variables. Server env module with `server-only` import lands in step 2. | Build-time check that no server key appears in `.next/static` (step 2) | 🟡 1 |
-| 2 | Purge Git secrets: `.gitignore`, gitleaks in pre-commit and CI, rotation/scrub docs | `.gitignore` ignores `.env*` (except `.env.example`); gitleaks job in `.github/workflows/ci.yml`; rotation and history scrub steps in `docs/INCIDENT_RESPONSE.md` (step 2); pre-commit hook (step 2) | CI gitleaks job | 🟡 1 |
-| 3 | Only the anon key in the client; service-role key server-only | `SUPABASE_SERVICE_ROLE_KEY` has no `NEXT_PUBLIC_` prefix in `.env.example`; client/server Supabase helpers in step 2 | Bundle scan (step 2) | 🟡 1 |
+| 1 | Hide API keys; only `NEXT_PUBLIC_*` values reach the browser | `src/lib/env.ts` (public) vs `src/lib/env.server.ts` (`server-only` import makes client imports fail the build); ESLint blocks importing server modules in UI code | `scripts/check-client-bundle.sh` in CI builds with sentinel secrets and fails if any reach `.next/static` | ✅ 2 |
+| 2 | Purge Git secrets: `.gitignore`, gitleaks in pre-commit and CI, rotation/scrub docs | `.gitignore` ignores `.env*` (except `.env.example`); `.githooks/pre-commit` runs gitleaks (enabled by `npm install`); gitleaks job in CI; rotation and history scrub in `docs/INCIDENT_RESPONSE.md` | CI gitleaks job | ✅ 2 |
+| 3 | Only the anon key in the client; service-role key server-only | Browser never talks to Supabase directly; `src/lib/supabase/admin.ts` is `server-only` | Bundle check in CI; ESLint `no-restricted-imports` | ✅ 2 |
 | 4 | RLS on every table, default deny, `user_id = auth.uid()` | `supabase/migrations/20261004000200_rls.sql`: RLS on all tables, all API-role grants revoked first, default privileges revoked for future tables | `supabase/tests/rls.test.sql`: "every public table has RLS enabled", cross-user read/write tests | ✅ 1 |
 | 5 | Encrypt sensitive data: TLS, at rest, field-level for health data | Supabase encrypts at rest and serves TLS only. `weight_logs.weight_kg_enc` and `body_measurements.data_enc` store ciphertext only; AES-256-GCM helper in step 3. Progress photos in a private bucket (`20261004000300_storage.sql`). | Encryption round-trip unit test (step 3) | 🟡 1 |
-| 6 | Server-side auth on every API route, server action and edge function | `proxy.ts` session refresh + `requireUser()` helper | Route tests that call each endpoint without a session (step 2) | ⬜ 2 |
+| 6 | Server-side auth on every API route, server action and edge function | `src/proxy.ts` redirects `/app/*` without a session; `requireUser()` in `src/lib/auth.ts` validates with `auth.getUser()` in each protected page/action; RLS backs it up | Manual check: `/app` returns 307 to `/login` without a session; RLS tests | 🟡 2 (route-level tests come with the first API routes in step 3) |
 | 7 | Ownership checks on every read/update/delete; non-guessable UUIDs | All primary keys are `gen_random_uuid()`; RLS `using`/`with check` on `user_id` | `rls.test.sql`: "B cannot update/delete A's meal by id (IDOR)" | ✅ 1 |
-| 8 | No mass assignment: users can't set role, user_id, premium or verified | Column-level grants: `role`, `is_premium`, `is_verified`, review `status` and `user_id` are never granted for writes. Zod allow-lists on routes in step 2. | `rls.test.sql`: role, is_premium, is_verified, owner_id, status, user_id tampering all rejected | ✅ 1 (DB) · ⬜ 2 (API) |
-| 9 | Secure session cookies (HttpOnly, Secure, SameSite, rotation, logout invalidation) | `@supabase/ssr` cookie options | Cookie attribute test (step 2) | ⬜ 2 |
-| 10 | Password hashing via provider, email verification, expiring reset tokens, optional MFA | Supabase Auth (bcrypt), email confirmation on, MFA (TOTP) enrolment UI | Auth flow tests (step 2) | ⬜ 2 |
-| 11 | Rate limiting per IP and per account with backoff | Rate limiter on login, signup, reset, search and AI routes | Rate-limit tests (step 2) | ⬜ 2 |
-| 12 | Bot protection (Turnstile) + honeypots | Cloudflare Turnstile on signup, login, reset, contact | Server rejects missing/invalid token (step 2) | ⬜ 2 |
-| 13 | Parameterized queries only | Supabase client query builder only; no raw SQL strings in app code. Migrations use `format('%I')` for identifiers. | ESLint rule banning raw `sql` string concat (step 2) | 🟡 1 |
-| 14 | Zod validation on client and server | Shared schemas in `src/lib/validation` (step 2). DB `check` constraints already enforce lengths and ranges on every column. | Validation unit tests (step 2) | 🟡 1 |
-| 15 | Escape user content; no `dangerouslySetInnerHTML` with user data; DOMPurify for rich text | React escaping by default; ESLint `react/no-danger` | Lint rule (step 2) | ⬜ 2 |
+| 8 | No mass assignment: users can't set role, user_id, premium or verified | Column-level grants in the DB; Zod object schemas drop unknown fields in every action | `rls.test.sql` tampering tests; `auth.test.ts` "drops fields that aren't on the allow-list" | ✅ 2 |
+| 9 | Secure session cookies (HttpOnly, Secure, SameSite, rotation, logout invalidation) | `src/lib/supabase/cookies.ts` forces `HttpOnly`, `Secure` (production), `SameSite=Lax` on every auth cookie; Supabase rotates refresh tokens; logout calls `signOut()` which revokes the session | Manual header check | ✅ 2 |
+| 10 | Password hashing via provider, email verification, expiring reset tokens, optional MFA | Supabase Auth (bcrypt); email confirmation required (`supabase/config.toml`, hosted setting in README); single-use `token_hash` links in `supabase/templates/`; MFA enrolment UI comes with account settings | Auth flow tests | 🟡 2 (MFA UI in step 3) |
+| 11 | Rate limiting per IP and per account with backoff | `check_rate_limit()` DB function (`20261004000400_rate_limits.sql`) + `src/lib/security/rate-limit.ts`; login 5/15 min, signup 5/h, reset 3/h, per IP and per email; fails closed | `rls.test.sql` rate-limit tests | ✅ 2 (search and AI limits added with those routes) |
+| 12 | Bot protection (Turnstile) + honeypots | Turnstile widget + server verification on signup, login and reset (`src/lib/security/turnstile.ts`); hidden `website` honeypot; production fails closed without keys. Contact form in step 4. | `auth.test.ts` honeypot tests | ✅ 2 |
+| 13 | Parameterized queries only | Supabase query builder only; ESLint blocks dynamic `rpc()` names; migrations use `format('%I')` | Lint | ✅ 2 |
+| 14 | Zod validation on client and server | `src/lib/validation/auth.ts` used by the forms (`useClientValidation`) and the Server Actions; DB `check` constraints as a final layer | `auth.test.ts` | ✅ 2 |
+| 15 | Escape user content; no `dangerouslySetInnerHTML` with user data; DOMPurify for rich text | React escaping; ESLint `react/no-danger: error` | Lint | ✅ 2 |
 | 16 | Restrict uploads: type/extension allow-list, magic bytes, size, random names, private bucket, signed URLs, strip EXIF | Bucket is private, 5 MB limit, jpeg/png/webp only, no client policies (`20261004000300_storage.sql`). Clients can't insert `progress_photos` rows. Upload route with magic-byte check and EXIF strip in step 3. | `rls.test.sql`: client insert into `progress_photos` rejected; upload route tests (step 3) | 🟡 1 |
-| 17 | Trim API responses; generic errors; no stack traces | Explicit `select` column lists; error helper | Response shape tests (step 2) | ⬜ 2 |
-| 18 | Security headers (CSP, HSTS, nosniff, frame-ancestors, Referrer-Policy, Permissions-Policy, CORS) | `proxy.ts` nonce-based CSP + `next.config.ts` headers | Header test against a built app (step 2) | ⬜ 2 |
-| 19 | Force HTTPS, HSTS preload, Secure cookies | Vercel HTTPS redirect + HSTS header | Header test (step 2) | ⬜ 2 |
-| 20 | Dependency scanning, lockfile, pinned versions | `package-lock.json` committed; `npm audit` + OSV-Scanner in CI; Dependabot config | CI jobs | 🟡 1 |
+| 17 | Trim API responses; generic errors; no stack traces | Actions return only a status and user-facing message; auth errors are generic; Next.js hides stack traces in production | Response shape tests with step 3 API routes | 🟡 2 |
+| 18 | Security headers (CSP, HSTS, nosniff, frame-ancestors, Referrer-Policy, Permissions-Policy, CORS) | `src/proxy.ts` (nonce CSP) + `next.config.ts` (HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP) | `csp.test.ts`; headers checked against a production build | ✅ 2 |
+| 19 | Force HTTPS, HSTS preload, Secure cookies | Vercel redirects HTTP→HTTPS; HSTS `max-age=63072000; includeSubDomains; preload`; CSP `upgrade-insecure-requests`; Secure cookies | Header check | ✅ 2 (submit to hstspreload.org once a domain exists) |
+| 20 | Dependency scanning, lockfile, pinned versions | `package-lock.json`; `.npmrc` `save-exact=true`; `npm audit` in CI; Dependabot | CI | ✅ 2 |
 
 ## Authentication and sessions (21–26)
 
 | # | Requirement | Implementation | Tests | Status |
 |---|---|---|---|---|
-| 21 | CSRF protection on state-changing requests | SameSite cookies + Origin check in server actions and route handlers | CSRF tests (step 2) | ⬜ 2 |
-| 22 | No account enumeration (same response and timing) | Generic auth responses, constant-time padding | Response equality tests (step 2) | ⬜ 2 |
-| 23 | MFA (TOTP) and passkeys; HIBP breach check; 12+ char minimum | Supabase MFA; HIBP k-anonymity check on signup/reset | Password policy tests (step 2) | ⬜ 2 |
-| 24 | Device list, log out everywhere, invalidate on password change, re-auth for sensitive actions | Account security page | Session tests (step 2) | ⬜ 2 |
-| 25 | No open redirects | Allow-listed `next` parameter | Redirect tests (step 2) | ⬜ 2 |
-| 26 | Timing-safe comparisons; short-lived, single-use, hashed tokens | `crypto.timingSafeEqual`; Supabase OTP tokens | Unit tests (step 2) | ⬜ 2 |
+| 21 | CSRF protection on state-changing requests | Server Actions: Next.js rejects requests whose Origin doesn't match the host; `SameSite=Lax` cookies; auth links are GET with single-use tokens | — | ✅ 2 (route handlers added later must check Origin) |
+| 22 | No account enumeration (same response and timing) | Generic messages for login/signup/reset; existing-email signup behaves like a new one; every auth action padded to ≥ 800 ms (`src/lib/security/timing.ts`) | Manual | ✅ 2 |
+| 23 | MFA (TOTP) and passkeys; HIBP breach check; 12+ char minimum | 12–128 chars in Zod and Supabase config; HIBP k-anonymity check on signup and reset (`src/lib/security/password.ts`). MFA/passkey UI with account settings. | `password.test.ts`, `auth.test.ts` | 🟡 2 (MFA UI in step 3) |
+| 24 | Device list, log out everywhere, invalidate on password change, re-auth for sensitive actions | "Log out on all devices" (`signOut({ scope: 'global' })`); other sessions signed out on password change; `secure_password_change` on. Device list and re-auth for export/delete with account settings. | Manual | 🟡 2 |
+| 25 | No open redirects | `safeRedirectPath()` allow-lists `/app/*`; `/auth/confirm` allow-lists `next` | `redirect.test.ts` | ✅ 2 |
+| 26 | Timing-safe comparisons; short-lived, single-use, hashed tokens | Email/reset tokens are Supabase's single-use hashed OTPs; no app-level secret comparisons yet (webhooks in step 3 will use `timingSafeEqual`) | — | 🟡 2 |
 
 ## Server and data (27–34)
 
@@ -51,10 +51,10 @@ Build steps: **1** architecture & schema · **2** auth & security · **3** core 
 | 28 | Least-privilege DB roles | App uses `anon`/`authenticated` (RLS) and `service_role` only on the server; no superuser. Separate migration and analytics roles documented in step 2. | `rls.test.sql` runs every check as the API roles | 🟡 1 |
 | 29 | Pagination and max page size on every list endpoint | Shared pagination helper (max 100) | Tests (step 3) | ⬜ 3 |
 | 30 | Encrypted, automated backups, tested restore, retention, scheduled purge | Supabase daily backups; `docs/BACKUP_AND_RETENTION.md` (step 2). Account deletion already cascades to all user data. | `rls.test.sql`: "account deletion cascades" | 🟡 1 |
-| 31 | Immutable audit logs, no health data or secrets | `audit_logs` table: no client access, update/delete blocked by trigger, no FK so it survives account deletion | `rls.test.sql`: update/delete rejected; client read rejected; survives deletion | ✅ 1 (storage) · ⬜ 2 (writers) |
+| 31 | Immutable audit logs, no health data or secrets | `audit_logs` (append-only); `src/lib/security/audit.ts` records login, failed login, logout, signup, reset, password change, rate-limit and bot-check events with a salted IP hash | `rls.test.sql` | ✅ 2 (exports, deletions and admin actions logged when built) |
 | 32 | Verified, idempotent, replay-safe webhooks | Signature check helper + processed-event table | Tests (step 3) | ⬜ 3 |
 | 33 | Idempotency keys for payments; hosted Stripe Checkout | Premium tier uses Stripe Checkout | Tests (step 3) | ⬜ 3 |
-| 34 | Strict CORS allow-list | No wildcard; same-origin API by default | Header test (step 2) | ⬜ 2 |
+| 34 | Strict CORS allow-list | No CORS headers are sent, so browsers block cross-origin reads; API is same-origin only | Header check | ✅ 2 |
 
 ## AI-specific (35–37)
 
@@ -68,19 +68,19 @@ Build steps: **1** architecture & schema · **2** auth & security · **3** core 
 
 | # | Requirement | Implementation | Tests | Status |
 |---|---|---|---|---|
-| 38 | CSP with nonces, SRI on third-party scripts, analytics only after consent | `proxy.ts` nonce CSP; consent-gated GA4 loader | Header and consent tests (steps 2 and 4) | ⬜ 2 |
+| 38 | CSP with nonces, SRI on third-party scripts, analytics only after consent | Nonce CSP with `strict-dynamic`, no inline/eval scripts in production. Inline styles are allowed (React style attributes and the Turnstile widget need them). Turnstile can't use SRI (Cloudflare changes the file); GA4 consent gating in step 4. | `csp.test.ts` | 🟡 2 |
 | 39 | Service worker never caches authenticated/personal data; clear caches on logout | Network-only for `/api` and `/app`; logout clears caches and storage | Tests (step 5) | ⬜ 5 |
 | 40 | Capacitor: Keychain/Keystore tokens, biometric lock, hidden app-switcher previews, no sensitive logs, consider pinning | Capacitor config and secure storage plugin | Manual checklist (step 5) | ⬜ 5 |
-| 41 | `frame-ancestors 'none'`; `Cache-Control: no-store` on sensitive pages | `proxy.ts` headers | Header test (step 2) | ⬜ 2 |
+| 41 | `frame-ancestors 'none'`; `Cache-Control: no-store` on sensitive pages | CSP `frame-ancestors 'none'` + `X-Frame-Options: DENY`; `no-store` on `/app/*`, auth pages and `/auth/*` | Verified on a production build | ✅ 2 |
 
 ## Supply chain, CI and operations (42–48)
 
 | # | Requirement | Implementation | Tests | Status |
 |---|---|---|---|---|
-| 42 | Lockfile, `npm ci`, no untrusted install scripts, provenance | `package-lock.json`; CI uses `npm ci`; exact versions pinned in step 2 | CI | 🟡 1 |
-| 43 | SAST, secret scanning, block merges on high severity | gitleaks in CI now; CodeQL workflow (step 2) | CI | 🟡 1 |
+| 42 | Lockfile, `npm ci`, no untrusted install scripts, provenance | `package-lock.json`; CI uses `npm ci`; exact versions (`save-exact`) | CI | 🟡 2 (review `ignore-scripts` when native deps arrive) |
+| 43 | SAST, secret scanning, block merges on high severity | CodeQL (`security-extended`) + gitleaks in CI. Make both required checks in branch protection. | CI | ✅ 2 |
 | 44 | Branch protection, required reviews, signed commits, separate environments and keys | GitHub settings + Vercel environments; steps in `docs/DEPLOYMENT.md` | Manual (repo owner) | ⬜ manual |
-| 45 | Secret rotation schedule and incident-response runbook | `docs/INCIDENT_RESPONSE.md` | — | ⬜ 2 |
+| 45 | Secret rotation schedule and incident-response runbook | `docs/INCIDENT_RESPONSE.md` | — | ✅ 2 |
 | 46 | WAF/DDoS, SPF/DKIM/DMARC, CAA, `security.txt` | Cloudflare + DNS once a domain exists; `public/.well-known/security.txt` (step 4) | Manual | ⬜ 4 |
 | 47 | Error monitoring with PII scrubbing | Sentry with `beforeSend` scrubbing | — | ⬜ 5 |
 | 48 | OWASP Top 10 / ASVS L2 review and pre-launch pen-test checklist | `docs/PENTEST_CHECKLIST.md` | — | ⬜ 5 |

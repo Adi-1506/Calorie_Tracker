@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { connection } from "next/server";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,10 +15,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Calorie Tracker",
-  description: "Track calories, macros and nutrition, including South Indian and Kerala dishes.",
+  description: "Track calories, macros and nutrients for any food, from home-cooked meals to packaged snacks.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Render per request so Next.js can attach the CSP nonce to its scripts.
+  await connection();
+
   return (
     <html
       lang="en"
