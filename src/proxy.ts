@@ -4,6 +4,8 @@ import { updateSession } from "@/lib/supabase/proxy";
 
 const PROTECTED_PREFIX = "/app";
 const AUTH_PAGES = ["/login", "/signup", "/forgot-password", "/reset-password"];
+// Signed-in visitors skip these and go straight to their app.
+const SIGNED_IN_SKIP = ["/", "/login", "/signup"];
 
 function isProtected(pathname: string) {
   return pathname === PROTECTED_PREFIX || pathname.startsWith(`${PROTECTED_PREFIX}/`);
@@ -39,11 +41,14 @@ export async function proxy(request: NextRequest) {
     result = NextResponse.redirect(login);
     // Keep any refreshed/cleared auth cookies on the redirect.
     for (const cookie of response.cookies.getAll()) result.cookies.set(cookie);
+  } else if (user && SIGNED_IN_SKIP.includes(pathname)) {
+    result = NextResponse.redirect(new URL("/app", request.url));
+    for (const cookie of response.cookies.getAll()) result.cookies.set(cookie);
   }
 
   result.headers.set("Content-Security-Policy", csp);
   // Personal pages must never be cached by browsers or CDNs (security item 41).
-  if (isProtected(pathname) || AUTH_PAGES.includes(pathname) || pathname.startsWith("/auth/")) {
+  if (isProtected(pathname) || AUTH_PAGES.includes(pathname) || pathname === "/" || pathname.startsWith("/auth/")) {
     result.headers.set("Cache-Control", "private, no-store, max-age=0");
   }
   return result;
