@@ -26,6 +26,8 @@ export class AiError extends Error {
 }
 
 const DEFAULT_MODEL = "gemini-flash-latest";
+// Used when the default model is overloaded or out of free-tier quota.
+const FALLBACK_MODEL = "gemini-flash-lite-latest";
 const DEFAULT_BASE = "https://generativelanguage.googleapis.com";
 const TIMEOUT_MS = 30_000;
 
@@ -72,29 +74,50 @@ export function fromGeminiResponse(data: GeminiResponse): AiResult {
 export async function generate(req: AiRequest, fetchImpl: typeof fetch = fetch): Promise<AiResult> {
   const env = serverEnv();
   if (!env.geminiApiKey) throw new AiError("not_configured");
-  const model = env.geminiModel ?? DEFAULT_MODEL;
   const base = env.geminiBaseUrl ?? DEFAULT_BASE;
+  // A model set explicitly is used alone; the default falls back to a lighter one when busy.
+  const models = env.geminiModel ? [env.geminiModel] : [DEFAULT_MODEL, FALLBACK_MODEL];
 
-  let res: Response;
-  try {
-    res = await fetchImpl(`${base}/v1beta/models/${model}:generateContent`, {
-      method: "POST",
-      // Key in a header, not the URL, so it never lands in access logs.
-      headers: { "content-type": "application/json", "x-goog-api-key": env.geminiApiKey },
-      body: JSON.stringify(toGeminiBody(req)),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      cache: "no-store",
-    });
-  } catch {
-    throw new AiError("failed");
+  for (const [i, model] of models.entries()) {
+    let res: Response;
+    try {
+      res = await fetchImpl(`${base}/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        // Key in a header, not the URL, so it never lands in access logs.
+        headers: { "content-type": "application/json", "x-goog-api-key": env.geminiApiKey },
+        body: JSON.stringify(toGeminiBody(req)),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+        cache: "no-store",
+      });
+    } catch {
+      throw new AiError("failed");
+    }
+    if (res.status === 429 || res.status === 503) {
+      console.warn(`Gemini ${model} returned ${res.status}: ${await errorMessage(res)}`);
+      if (i < models.length - 1) continue;
+      throw new AiError("busy");
+    }
+    if (!res.ok) {
+      console.error(`Gemini ${model} returned ${res.status}: ${await errorMessage(res)}`);
+      throw new AiError("failed");
+    }
+    let data: GeminiResponse;
+    try {
+      data = (await res.json()) as GeminiResponse;
+    } catch {
+      throw new AiError("failed");
+    }
+    return fromGeminiResponse(data);
   }
-  if (res.status === 429 || res.status === 503) throw new AiError("busy");
-  if (!res.ok) throw new AiError("failed");
-  let data: GeminiResponse;
+  throw new AiError("failed");
+}
+
+/** Google's short error message, for the server log (never shown to users). */
+async function errorMessage(res: Response): Promise<string> {
   try {
-    data = (await res.json()) as GeminiResponse;
+    const body = (await res.json()) as { error?: { message?: string } };
+    return (body.error?.message ?? "").slice(0, 300);
   } catch {
-    throw new AiError("failed");
+    return "";
   }
-  return fromGeminiResponse(data);
 }
