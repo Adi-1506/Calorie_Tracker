@@ -35,7 +35,10 @@ const PROFILE_COLUMNS =
   "id, display_name, date_of_birth, sex, height_cm, activity_level, goal, diet_type, allergies, timezone, hide_numbers, ai_consent_at, onboarding_completed_at";
 
 export async function getProfile(supabase: SupabaseClient, userId: string): Promise<Profile | null> {
-  const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", userId).maybeSingle();
+  const { data, error } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", userId).maybeSingle();
+  // Fail loudly: returning null here reads as "not onboarded" and loops the
+  // user back to onboarding (for example when a migration hasn't been applied).
+  if (error) throw new Error(`Could not load profile (${error.code ?? "unknown"}): ${error.message}`);
   return (data as Profile | null) ?? null;
 }
 
